@@ -20,7 +20,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+# Modified by Sundar Sundaresan, USA. carnaticmusicguru2015@comcast.net
+# Downloaded from https://github.com/naturalstupid/pyhoroscope
 """
 Use Swiss ephemeris to calculate tithi, nakshatra, etc.
 """
@@ -32,7 +33,7 @@ from collections import namedtuple as struct
 import swisseph as swe
 from _datetime import datetime, timedelta
 from datetime import date
-import math
+import math, os
 from collections import OrderedDict as Dict
 """
 NAKSHATRA_LIST=['Aswini','Bharani','Karthigai','Rohini','Mrigasheesham','Thiruvaathirai',
@@ -60,7 +61,8 @@ PAKSHA_LIST=['Krishna Paksha','Sukla Paksha']
     set this to - -10 for chart creation (otherwise chart will show Pluto for Kethu)
 """
 swe.KETU = -10
-swe.set_ephe_path("D:\\LaptopBackup\\Local\\Program Files (x86)\\Jagannatha Hora\\jhcore\\ephe\\")
+_ephe_path = os.path.abspath('./ephe/')
+swe.set_ephe_path(_ephe_path)
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Place', ['Place','latitude', 'longitude', 'timezone'])
 
