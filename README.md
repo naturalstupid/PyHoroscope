@@ -109,5 +109,5 @@ computational speed stays the same no matter which date you enter.
 License
 -------
 
-GNU Affero GPL version 3 (or later).
+MIT License.
 
