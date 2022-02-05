@@ -92,7 +92,7 @@ Using the Code / command line
     chart.place('Mathura,IN')
     chart.date_of_birth('-3229,6,17')
     chart.time_of_birth('23:59:00')
-    chart.time_zone('-5.0')
+    chart.time_zone('5.5')
     chart.chart_type(chart_type)
     chart.compute_horoscope()
     """
