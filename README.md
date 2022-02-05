@@ -102,8 +102,9 @@ Accuracy
 --------
 
 The program is as accurate as the Swiss Ephemeris installed on your system. So generally it is
-accurate for years 5000 BCE to 5000 CE. The
-computational speed stays the same no matter which date you enter.
+accurate for years 13000 BCE to 16800 CE. The
+computational speed stays the same no matter which date you enter. Required swiss ephimeres files are also /ephe/ folder of this repository.
+Overall size of these files is more than 100 MB. To reduce your application size, you can restrict the dates within a range and could remove those ephimeres files from the folder.
 
 
 License
