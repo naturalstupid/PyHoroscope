@@ -7,7 +7,7 @@ Drig-ganita Panchanga).
 Features
 --------
 
-Core Files:`panchaga.py`, `horoscope.py`, `compatibility.py` and `horo_chart.py`
+Core Files:`panchanga.py`, `horoscope.py`, `compatibility.py` and `horo_chart.py`
  
 Computation of the five essentials of the panchangam:
 * Tithi
