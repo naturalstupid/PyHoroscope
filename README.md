@@ -102,7 +102,7 @@ Accuracy
 --------
 
 The program is as accurate as the Swiss Ephemeris installed on your system. So generally it is
-accurate for years 5000 BCE to 5000 CE, especially in the range 2500 BCE - 2500 CE. The
+accurate for years 5000 BCE to 5000 CE. The
 computational speed stays the same no matter which date you enter.
 
 
