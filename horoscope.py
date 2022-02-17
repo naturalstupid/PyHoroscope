@@ -24,11 +24,10 @@
 import swisseph as swe
 from _datetime import datetime, timedelta
 from datetime import date
-import warnings
 panchanga = __import__('panchanga')
 
 class Horoscope():  
-    def __init__(self,place_with_country_code=None,latitude=None,longitude=None,timezone_offset=None,date_in=None,birth_time=None,ayanamsa_mode="Lahiri"):
+    def __init__(self,place_with_country_code=None,latitude=None,longitude=None,timezone_offset=None,date_in=None,birth_time=None,ayanamsa_mode="Lahiri",ayanamsa_value=None):
         self.place_name = place_with_country_code
         self.latitude = latitude
         self.longitude = longitude
@@ -36,7 +35,8 @@ class Horoscope():
         self.date = date_in
         self.birth_time = birth_time
         self.ayanamsa_mode = ayanamsa_mode
-        print(self.place_name,self.latitude,self.longitude,self.timezone_offset)
+        self.ayanamsa_value = ayanamsa_value
+        #print(self.place_name,self.latitude,self.longitude,self.timezone_offset)
         if self.place_name == None:
             if self.latitude==None or self.longitude==None or self.timezone_offset==None:
                 print('Please provide either place_with_country_code or combination of latitude and longitude ...\n Aborting script')
@@ -52,14 +52,6 @@ class Horoscope():
                     panchanga.get_latitude_longitude_from_place_name(place_with_country_code)
                 
                 
-        # Set Ayanamsa Mode
-        if ayanamsa_mode.upper() in panchanga.available_ayanamsa_modes.keys(): # ["KP","LAHIRI", "RAMAN"]:
-            key = ayanamsa_mode.upper()
-            panchanga.set_ayanamsa_mode(key)
-            print("Ayanamsa mode",ayanamsa_mode,'set')
-        else:
-            warnings.warn("Unsupported Ayanamsa mode:", ayanamsa_mode,"KP Assumed")
-            panchanga.set_ayanamsa_mode("KP")
         if date_in==None:
             self.date = panchanga.Date(date.today().year,date.today().month,date.today().day)
         else:
@@ -76,10 +68,14 @@ class Horoscope():
             self.birth_time = panchanga.from_dms(int(btArr[0]),int(btArr[1]),0)
             if (len(btArr)==3):
                 self.julian_day = swe.julday(self.date.year,self.date.month,self.date.day, int(btArr[0])+int(btArr[1])/60+int(btArr[2])/3600)
-                self.birth_time = panchanga.from_dms(int(btArr[0]),int(btArr[1]),int(btArr[2]))
-                
+                self.birth_time = panchanga.from_dms(int(btArr[0]),int(btArr[1]),int(btArr[2]))                
         else:
             self.julian_day = panchanga.gregorian_to_jd(self.date)
+        # Set Ayanamsa Mode
+        key = ayanamsa_mode.upper()
+        #print('horoscope setting ayanamsa',key,self.ayanamsa_value,self.julian_day)
+        panchanga.set_ayanamsa_mode(key,self.ayanamsa_value,self.julian_day)
+        self.ayanamsa_value = panchanga.get_ayanamsa_value(self.julian_day)
         return
     def _get_calendar_resource_strings(self, language='en'):
       inpFile = 'list_values_'+language+'.txt'
@@ -127,13 +123,14 @@ class Horoscope():
         calendar_info[cal_key_list['moonrise_str']] = moon_rise
         moon_set = panchanga.moonset(self.julian_utc,place,as_string)
         calendar_info[cal_key_list['moonset_str']] = moon_set
-        """ for tithi calculations use Julian UTC which is at sun rise time 
-            whereas self.julian_day is at birth time """
+        """ for tithi at sun rise time - use Julian UTC  """
         calendar_info[cal_key_list['tithi_str']]= panchanga.tithi(self.julian_utc,place,as_string)
         jd = self.julian_day
         calendar_info[cal_key_list['raasi_str']] = panchanga.get_raasi_new(jd,place,as_string)
         calendar_info[cal_key_list['nakshatra_str']] = panchanga.nakshatra(jd,place,as_string)
-        jd = self.julian_utc # For kaalam, yogam use sunrise time
+        self._nakshatra_number, self._paadha_number,_=panchanga.nakshatra(jd,place,as_string=False)
+        """ # For kaalam, yogam use sunrise time """
+        jd = self.julian_utc 
         _raahu_kaalam = panchanga.raahu_kaalam(jd,place,as_string)
         calendar_info[cal_key_list['raahu_kaalam_str']] = _raahu_kaalam
         kuligai = panchanga.gulikai_kaalam(jd,place,as_string)

@@ -1,5 +1,5 @@
-PyHoroscope
-==============
+PyHoroscope 0.9.5
+=================
 
 Observational Indian lunisolar calendar, horoscope and matching using the Swiss ephemeris (Hindu
 Drig-ganita Panchanga).
@@ -33,7 +33,7 @@ Also Included :
 Available in English, Tamil and Telugu
 -----------------------------------------
 
-You can add your own language by creating `list_values_xx.txt` and `msg_strings_xx.txt	by copying the _en files and replacing with appropriate native language strings.
+You can add your own language by creating `list_values_xx.txt` and `msg_strings_xx.txt`	by copying the _en files and replacing with appropriate native language strings.
 
 Do not forget to add the new language into the `available_languages` in `horo_chart.py`
 
@@ -55,7 +55,12 @@ Python interface to Swiss ephemeris.
 The core of the library (`panchanga.py` and `horoscope.py`) can be imported into other code
 or used from the command line.
 
-In order to just _run_ the GUI (`horo_chart.py`) you also need pyqt6:
+There are three UI files namely: `horo_chart.py`, `horo_chart_tabs.py` and `match_ui.py`.
+`horo_chart.py` - provides a one page panchanga, rasi and navamsa charts
+`horo_chart_tabs.py`- provides multi-tab/page panchanga, divisional charts and marriage compatibility
+`match_ui.py` - provides just marriage compatibility between boy and girl based on their birh stars.
+
+In order to just _run_ the GUI, you also need pyqt6:
 
 ```
     pip install pyqt6
@@ -105,6 +110,10 @@ The program is as accurate as the Swiss Ephemeris installed on your system. So g
 accurate for years 5000 BCE to 5000 CE, especially in the range 2500 BCE - 2500 CE. The
 computational speed stays the same no matter which date you enter.
 
+Personal Opinion:
+------------------
+When using BC dates (such as mahabharatha dates) it is advised to use `SURYA_SIDHANTHA` or `SUNDAR_SS` as ayanamsa styles, as ayanamsa values of every other ayanamsa types such as `LAHIRI, KP` etc are inaccurate. 
+`SUNDAR_SS` is a sine curve forcing zero ayanamsa every 3200 years from -3101 BCE and 27 degrees as peak ayanamsa.
 
 License
 -------

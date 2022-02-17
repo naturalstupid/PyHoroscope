@@ -33,7 +33,7 @@ from collections import namedtuple as struct
 import swisseph as swe
 from _datetime import datetime, timedelta
 from datetime import date
-import math, os
+import math, os, warnings
 from collections import OrderedDict as Dict
 """
 NAKSHATRA_LIST=['Aswini','Bharani','Karthigai','Rohini','Mrigasheesham','Thiruvaathirai',
@@ -100,30 +100,75 @@ available_ayanamsa_modes = {"FAGAN":swe.SIDM_FAGAN_BRADLEY ,"KP": swe.SIDM_KRISH
                             "USHASHASHI": swe.SIDM_USHASHASHI, "YUKTESHWAR": swe.SIDM_YUKTESHWAR, "SURYASIDDHANTA": swe.SIDM_SURYASIDDHANTA,
                             "SURYASIDDHANTA_MSUN": swe.SIDM_SURYASIDDHANTA_MSUN, "ARYABHATA":swe.SIDM_ARYABHATA, "ARYABHATA_MSUN":swe.SIDM_ARYABHATA_MSUN,
                             "SS_CITRA":swe.SIDM_SS_CITRA, "TRUE_CITRA":swe.SIDM_TRUE_CITRA, "TRUE_REVATI":swe.SIDM_TRUE_REVATI,
-                            "SS_REVATI": swe.SIDM_SS_REVATI, "SIDM_USER":swe.SIDM_USER,
+                            "SS_REVATI": swe.SIDM_SS_REVATI,'SENTHIL':'', 'SUNDAR_SS':'',"SIDM_USER":swe.SIDM_USER,
                             #"KP-SENTHIL":swe.SIDM_KRISHNAMURTI_VP291,
                             #"TRUE_PUSHYA":swe.SIDM_TRUE_PUSHYA, "TRUE_MULA":swe.SIDM_TRUE_MULA, "ARYABHATA_522":swe.SIDM_ARYABHATA_522, 
                             }
 
 _ayanamsa_mode = "KP"
-def set_ayanamsa_mode(ayanamsa_mode = "KP",ayanamsa_value=None):
+_ayanamsa_value = None
+def ayanamsa_surya_siddhantha_model(jd,as_string=False):
+    maha_yuga_years = 4320000
+    completed_maha_yuga_years = 3888000
+    ayanamsa_cycle_years = 7200
+    ayanamsa_cycle_in_degrees = 108
+    kali_yuga_jd =  swe.julday(-3101,1,23,12,cal=swe.JUL_CAL)
+    ss_sideral_year = 365.256363 #365.2421988 # 365.2587565
+    diff_days = jd - kali_yuga_jd
+    t = diff_days / ss_sideral_year
+    ayanamsa_cycle_fraction = (t/ayanamsa_cycle_years)
+    ayanamsa = math.sin(ayanamsa_cycle_fraction * 2.0 * math.pi) *ayanamsa_cycle_in_degrees/4.0
+    if as_string:
+        return to_dms(ayanamsa, as_string)
+    else:
+        return ayanamsa
+def calculate_ayanamsa_senthil_from_jd(jd,as_string=False):
+    #print('calling senthil')
+    reference_jd =  swe.julday(2000, 1, 1, 12,cal=swe.GREG_CAL)
+    sidereal_year = 365.242198781
+    p0 = 50.27972324
+    m = 0.0002225
+    a0 = 85591.25323
+    q = m / 2
+    diff_days = (jd - reference_jd) # in days
+    t = diff_days / sidereal_year
+    ayanamsa = a0 + p0*t + q*t*t
+    ayanamsa /= 3600
+    if as_string:
+        return to_dms(ayanamsa, as_string)
+    else:
+        return ayanamsa
+def get_ayanamsa_value(jd):
+    global _ayanamsa_mode,_ayanamsa_value
+    key = _ayanamsa_mode.lower()
+    if key =='sidm_user' or key =='senthil' or key == 'sundar_ss':
+        #print(key,'returning',_ayanamsa_value)
+        return _ayanamsa_value
+    else:
+        set_ayanamsa_mode(_ayanamsa_mode,_ayanamsa_value,jd)
+        return swe.get_ayanamsa(jd)
+def set_ayanamsa_mode(ayanamsa_mode = "KP",ayanamsa_value=None,jd=None):
     """
         Set Ayanamsa mode
         @param ayanamsa_mode - Default - Lahiri
         @param ayanamsa_value - in case of 'SIDM_USER'
-        Available ayanamsa_modes are 
-        "FAGAN","KP", "LAHIRI""RAMAN","USHASHASHI""YUKTESHWAR", "SURYASIDDHANTA", "SURYASIDDHANTA_MSUN",
-        "ARYABHATA", "ARYABHATA_MSUN", "SS_CITRA", "TRUE_CITRA", "TRUE_REVATI","SS_REVATI","SIDM_USER"
+        See 'available_ayanamsa_modes' for the list of available models
     """
-    global _ayanamsa_mode
-    #print("Ayanamsa mode before",ayanamsa_mode)
-    if ayanamsa_mode.upper() in [am.upper() for am in available_ayanamsa_modes.keys()]:
-        if ayanamsa_mode.upper() == "SIDM_USER":
-            swe.set_sid_mode(available_ayanamsa_modes[ayanamsa_mode],ayanamsa_value)
+    global _ayanamsa_mode,_ayanamsa_value
+    key = ayanamsa_mode.upper()
+    #print('panchanga setting',key,ayanamsa_value,jd)
+    if key in [am.upper() for am in available_ayanamsa_modes.keys()]:
+        if key == "SIDM_USER":
+            _ayanamsa_value = ayanamsa_value
+            swe.set_sid_mode(swe.SIDM_USER,ayanamsa_value)
+        elif key == "SENTHIL":
+            _ayanamsa_value = calculate_ayanamsa_senthil_from_jd(jd,as_string=False)
+        elif key == "SUNDAR_SS":
+            _ayanamsa_value = ayanamsa_surya_siddhantha_model(jd,as_string=False)
         else:
-            swe.set_sid_mode(available_ayanamsa_modes[ayanamsa_mode.upper()])
+            swe.set_sid_mode(available_ayanamsa_modes[key])
     else:
-        print('Ayanamsa mode',ayanamsa_mode,' is not a valid option. Set to LAHIRI')
+        warnings.warn("Unsupported Ayanamsa mode:", ayanamsa_mode,"KP Assumed")
         swe.set_sid_mode(swe.SIDM_LAHIRI)
     #print("Ayanamsa mode",ayanamsa_mode,'set')
     _ayanamsa_mode = ayanamsa_mode
@@ -135,7 +180,7 @@ def read_list_types_from_file(lstTypeFile):
     from os import path
     import codecs
     if not path.exists(lstTypeFile):
-        print('Error: List Types iile:'+lstTypeFile+' does not exist. Script aborted.')
+        print('Error: List Types File:'+lstTypeFile+' does not exist. Script aborted.')
         exit()
     
     global cal_key_list
@@ -157,7 +202,7 @@ def read_lists_from_file(inpFile):
     import codecs
     global PLANET_NAMES,NAKSHATRA_LIST,TITHI_LIST,RAASI_LIST,KARANA_LIST,DAYS_LIST,PAKSHA_LIST,YOGAM_LIST, MONTH_LIST,YEAR_LIST,DHASA_LIST,BHUKTHI_LIST
     if not path.exists(inpFile):
-        print('Error: input iile:'+inpFile+' does not exist. Script aborted.')
+        print('Error: input file:'+inpFile+' does not exist. Script aborted.')
         exit()
     fp = codecs.open(inpFile, encoding='utf-8', mode='r')
     line = fp.readline().strip().replace('\n','')
@@ -285,6 +330,8 @@ def to_dms(deg,as_string=False, is_lat_long=None):
   d = int(deg)
   mins = (deg - d) * 60
   m = int(mins)
+  ss = (mins-m)*60
+  s = int(ss)
   #"""
   if (is_lat_long==None) and d > 23:
       #print('is_lat_long,d',is_lat_long,d)
@@ -299,20 +346,20 @@ def to_dms(deg,as_string=False, is_lat_long=None):
   if m==60:
       d += 1
       m = 0
-  s = int(round((mins - m) * 60))
+  #s = int(round((mins - m) * 60))
   if s==60:
       m += 1
       s = 0
   answer = [d, m, s]
   if as_string or is_lat_long != None:
       if is_lat_long=='plong':
-          answer = str(abs(d))+degree_symbol+" "+str(abs(m))+minute_symbol+" "+str(abs(s))+second_symbol
+          answer = str((d))+degree_symbol+" "+str(abs(m))+minute_symbol+" "+str(abs(s))+second_symbol
       elif is_lat_long=='lat':
-          answer = str(abs(d))+degree_symbol+" "+str(abs(m))+minute_symbol+" "+str(abs(s))+second_symbol
+          answer = str((d))+degree_symbol+" "+str(abs(m))+minute_symbol+" "+str(abs(s))+second_symbol
           if d > 0: answer += ' N'
           else: answer +=' S' 
       elif is_lat_long=='long':
-          answer = str(abs(d))+degree_symbol+" "+str(abs(m))+minute_symbol+" "+str(abs(s))+second_symbol
+          answer = str((d))+degree_symbol+" "+str(abs(m))+minute_symbol+" "+str(abs(s))+second_symbol
           if d > 0: answer += ' E'
           else: answer +=' W' 
       else: ## as_string = =True
@@ -408,7 +455,7 @@ def _lunar_daily_motion(jd):
   tomorrow_longitude = lunar_longitude(jd+1)
 #      print(tomorrow_longitude,today_longitude)
   if (tomorrow_longitude < today_longitude):
-    tomorrow_longitude += dms_to_deg(360,0,0)
+    tomorrow_longitude += from_dms(360,0,0)
   daily_motion = tomorrow_longitude - today_longitude
 #      print(tomorrow_longitude,today_longitude)
   return daily_motion
@@ -419,7 +466,7 @@ def _solar_daily_motion(jd):
   today_longitude = solar_longitude(jd)
   tomorrow_longitude = solar_longitude(jd+1)
   if (tomorrow_longitude < today_longitude):
-    tomorrow_longitude = tomorrow_longitude + dms_to_deg(360,0,0)
+    tomorrow_longitude = tomorrow_longitude + from_dms(360,0,0)
   daily_motion = tomorrow_longitude - today_longitude
 #  print(tomorrow_longitude,today_longitude)
   return daily_motion
@@ -439,8 +486,8 @@ def nakshatra_pada(longitude):
 
 def sidereal_longitude(jd, planet):
   """Computes nirayana (sidereal) longitude of given planet on jd"""
-  global _ayanamsa_mode
-  set_ayanamsa_mode(_ayanamsa_mode)
+  global _ayanamsa_mode,_ayanamsa_value
+  set_ayanamsa_mode(_ayanamsa_mode,_ayanamsa_value,jd)
   longi = swe.calc_ut(jd, planet, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)
   reset_ayanamsa_mode()
   return norm360(longi[0]) # degrees
@@ -487,6 +534,7 @@ def tithi(jd, place, as_string=False):
   paksha = ''
   # 1. Find time of sunrise
   rise = sunrise(jd, place)[0] - tz / 24
+  #print('sunrise,jd',rise,jd)
   
   # 2. Find tithi at this JDN
   moon_phase = lunar_phase(rise)
@@ -598,7 +646,7 @@ def nakshatra(jd, place, as_string=False):
     leap_nak = 1 if nak_no == 27 else leap_nak
     nak_no = int(leap_nak)
     if as_string:
-      answer+=[NAKSHATRA_LIST[nak_no-1]+' '+cal_key_list['paadham_str']+str(padam_no), to_dms(ends,as_string)+' '+cal_key_list['ends_at_str']]
+      answer+=NAKSHATRA_LIST[nak_no-1]+' '+cal_key_list['paadham_str']+str(padam_no)+' '+to_dms(ends,as_string)+' '+cal_key_list['ends_at_str']
     else:
       answer += [nak_no,padam_no, to_dms(ends,as_string)]
   return answer
@@ -1041,10 +1089,10 @@ def planetary_positions(jd, place,as_string=False):
 
 def ascendant(jd, place, as_string=False):
   """Lagna (=ascendant) calculation at any given time & place"""
-  global _ayanamsa_mode
+  global _ayanamsa_mode,_ayanamsa_value
   city, lat, lon, tz = place
   jd_utc = jd - (tz / 24.)
-  set_ayanamsa_mode(_ayanamsa_mode) # needed for swe.houses_ex()
+  set_ayanamsa_mode(_ayanamsa_mode,_ayanamsa_value,jd) # needed for swe.houses_ex()
 
   # returns two arrays, cusps and ascmc, where ascmc[0] = Ascendant
   nirayana_lagna = swe.houses_ex(jd_utc, lat, lon, flag = swe.FLG_SIDEREAL)[1][0]
@@ -1093,9 +1141,6 @@ def navamsa_from_long_old(longitude):
 
 def dhasavarga(jd, place,sign_division_factor, as_string=False):
   jd_utc = jd - place.timezone / 24.
-  """
-      ERROR: Rahu/Kethu positions are same for Hora, Dhasamsa, Dhwadhamsa, Thrisamsa, Sashtiamsa
-  """
   positions = []
   for planet in planet_list:
     p_id = planet_list.index(planet)
@@ -1103,7 +1148,6 @@ def dhasavarga(jd, place,sign_division_factor, as_string=False):
       nirayana_long = sidereal_longitude(jd_utc, planet)
     else: # Ketu
       nirayana_long = ketu(sidereal_longitude(jd_utc, swe.RAHU))
-
     if as_string:
         positions.append([PLANET_NAMES[p_id],RAASI_LIST[dasavarga_from_long(nirayana_long,sign_division_factor)]])
     else:

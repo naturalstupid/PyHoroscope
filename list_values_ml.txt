@@ -1,7 +1,7 @@
 ### List of Planet names (Order: Sun,Moon,Mars,Mercury,Jupiter,Venus,Saturn,Raagu,Kethu,Uranus,Neptune,Pluto)
-Sun ☉,Moon ☾,Mars ♂,Mercury ☿,Jupiter ♃,Venus ♀,Saturn ♄,Raagu ☊,Kethu ☋,Uranus,Neptune,Pluto
+സൂര്യൻ ☉,ചന്ദ്രൻ ☾,ചൊവ്വ ♂,ബുധൻ ☿,വ്യാഴം ♃,ശുക്രൻ ശനി,ശനി ♄,രാഹു ☊,കേതു ☋,യുറാനസ്,നെപ്റ്റ്യൂൺ,പ്ലൂട്ടോ
 ### List of nakshatra names
-Aswini,Bharani,Karthigai,Rohini,Mrigasheesham,Thiruvaathirai,Punarpoosam,Poosam,Aayilyam,Makam,Pooram,Uthiram,Hastham,Chithirai,Swaathi,Visaakam,Anusham,Kaettai,Moolam,Pooraadam,Uthiraadam,Thiruvonam,Avittam,Sadhayam,Poorattathi,Uthirattathi,Revathi
+അശ്വതി,ഭരണി,കാർത്തിക,രോഹിണി,മകയിരം,തിരുവാതിര,പുണർതം,പൂയം,ആയില്യം,മകം,പൂരം,ഉത്രം,അത്തം,ചിത്തിര,ചോതി,വിശാഖം,അനിഴം,തൃക്കേട്ട,മൂലം,പൂരാടം,ഉത്രാടം,തിരുവോണം,അവിട്ടം,ചതയം,പൂരുരുട്ടാതി,ഉത്രട്ടാതി,രേവതി
 ### List of tithi names
 Prathamai,Thuthiyai,Thiruthiyai,Sathurthi,Panjami,Shasti,Sapthami,Astami,Navami,Dhasami,Egadhasi,Dhuvadhasi,Thirayodasi,Sathuradasi,Pournami,Pirathamai,Thuthiyai,Thiruthiyai,Sathurthi,Panjami,Shasti,Sapthami,Ashtami,Navami,Dhasami,Egadhasi,Dhuvadhasi,Thirayodasi,Sathuradasi,Ammavasai
 ### List of raasi names
