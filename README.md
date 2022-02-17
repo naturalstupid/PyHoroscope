@@ -7,7 +7,7 @@ Drig-ganita Panchanga).
 Features
 --------
 
-Core Files:`panchaga.py`, `horoscope.py`, `compatibility.py` and `horo_chart.py`
+Core Files:`panchanga.py`, `horoscope.py`, `compatibility.py` and `horo_chart.py`
  
 Computation of the five essentials of the panchangam:
 * Tithi
@@ -97,7 +97,7 @@ Using the Code / command line
     chart.place('Mathura,IN')
     chart.date_of_birth('-3229,6,17')
     chart.time_of_birth('23:59:00')
-    chart.time_zone('-5.0')
+    chart.time_zone('5.5')
     chart.chart_type(chart_type)
     chart.compute_horoscope()
     """
@@ -107,8 +107,9 @@ Accuracy
 --------
 
 The program is as accurate as the Swiss Ephemeris installed on your system. So generally it is
-accurate for years 5000 BCE to 5000 CE, especially in the range 2500 BCE - 2500 CE. The
-computational speed stays the same no matter which date you enter.
+accurate for years 13000 BCE to 16800 CE. The
+computational speed stays the same no matter which date you enter. Required swiss ephimeres files are also /ephe/ folder of this repository.
+Overall size of these files is more than 100 MB. To reduce your application size, you can restrict the dates within a range and could remove those ephimeres files from the folder.
 
 Personal Opinion:
 ------------------
