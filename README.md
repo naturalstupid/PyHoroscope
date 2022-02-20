@@ -1,4 +1,4 @@
-PyHoroscope 0.9.5
+PyHoroscope 0.9.6
 =================
 
 Observational Indian lunisolar calendar, horoscope and matching using the Swiss ephemeris (Hindu
@@ -7,7 +7,9 @@ Drig-ganita Panchanga).
 Features
 --------
 
-Core Files:`panchanga.py`, `horoscope.py`, `compatibility.py` and `horo_chart.py`
+Core Files:`panchanga.py`, `horoscope.py`, `compatibility.py`, 
+
+`horo_chart.py`, `horo_chart_tabs.py` and `match_ui.py`.
  
 Computation of the five essentials of the panchangam:
 * Tithi
@@ -29,13 +31,14 @@ Also Included :
 * Vimsottari Dasha-Bhukti
 * Rahu Kala, Yamaganda Kala, Gulika Kala
 * Abhijit muhurta and Durmuhurtams
+* Marriage compatibility details (0.9.6)
 
 Available in English, Tamil and Telugu
 -----------------------------------------
 
 You can add your own language by creating `list_values_xx.txt` and `msg_strings_xx.txt`	by copying the _en files and replacing with appropriate native language strings.
 
-Do not forget to add the new language into the `available_languages` in `horo_chart.py`
+Do not forget to add the new language into the `available_languages` in `horo_chart.py` and/or `horo_chart_tabs.py`
 
 NOTE:
 All timings are end timings. Timings displayed higher than 24:00 denote
@@ -92,7 +95,6 @@ Using the Code / command line
     chart_type = 'North'
     chart = horo_chart.ChartWindow(chart_type=chart_type)
     chart.language('Tamil')
-    """
     chart.name('Krishna')
     chart.place('Mathura,IN')
     chart.date_of_birth('-3229,6,17')
@@ -100,8 +102,13 @@ Using the Code / command line
     chart.time_zone('5.5')
     chart.chart_type(chart_type)
     chart.compute_horoscope()
-    """
+    chart.minimum_compatibility_score(20.0)
+    chart.mahendra_porutham(False)
+    chart.vedha_porutham(False)
+    chart.rajju_porutham(False)
+    chart.sthree_dheerga_porutham(False)
     chart.show()
+    chart.save_as_pdf('delme.pdf')
 ```
 Accuracy
 --------

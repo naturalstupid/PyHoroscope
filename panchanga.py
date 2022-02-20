@@ -976,9 +976,9 @@ def trikalam(jd, place, option='raahu kaalam',as_string=False):
 
   return [start_time, end_time] # decimal hours to H:M:S
 
-raahu_kaalam = lambda jd, place,as_string=False: trikalam(jd, place, 'raahu kaalam', as_string=False)
-yamaganda_kaalam = lambda jd, place,as_string=False: trikalam(jd, place, 'yamagandam', as_string=False)
-gulikai_kaalam = lambda jd, place,as_string=False: trikalam(jd, place, 'gulikai',as_string=False)
+raahu_kaalam = lambda jd, place,as_string=False: trikalam(jd, place, 'raahu kaalam', as_string=as_string)
+yamaganda_kaalam = lambda jd, place,as_string=False: trikalam(jd, place, 'yamagandam', as_string=as_string)
+gulikai_kaalam = lambda jd, place,as_string=False: trikalam(jd, place, 'gulikai',as_string=as_string)
 
 def durmuhurtam(jd, place,as_string=False):
   city, lat, lon, tz = place

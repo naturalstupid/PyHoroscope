@@ -392,13 +392,13 @@ class Match:
             search_criteria = search_criteria & (self.match_db[_GIRL_STAR_COL]==self.girl_nakshatra_number)
             if girl_pad_given:
                 search_criteria = search_criteria & (self.match_db[_GIRL_PAD_COL]==self.girl_paadham_number)
-        if self.check_for_mahendra_porutham!=None:
+        if self.check_for_mahendra_porutham==True:
             search_criteria  = search_criteria & (self.match_db[_MAHEN_COL]==self.check_for_mahendra_porutham)
-        if self.check_for_vedha_porutham!=None:
+        if self.check_for_vedha_porutham==True:
             search_criteria = search_criteria & (self.match_db[_VEDHA_COL]==self.check_for_vedha_porutham)
-        if self.check_for_rajju_porutham!=None:
+        if self.check_for_rajju_porutham==True:
             search_criteria = search_criteria & (self.match_db[_RAJJU_COL]==self.check_for_rajju_porutham)
-        if self.check_for_shreedheerga_porutham!=None:
+        if self.check_for_shreedheerga_porutham==True:
             search_criteria = search_criteria & (self.match_db[_SHREE_COL]==self.check_for_shreedheerga_porutham)
         temp_results = self.match_db.index[search_criteria].tolist()
         temp_partners = []
@@ -420,6 +420,8 @@ class Match:
             compatibility_score = self.match_db.iloc[idx][_SCORE_COL]
             naalu_porutham_results = list(self.match_db.iloc[idx][_MAHEN_COL:])
             matching_partners.append((nak,p1,p2,ettu_porutham_results,compatibility_score,naalu_porutham_results)) 
+        print(len(matching_partners),' matching stars found for',self.boy_nakshatra_number,self.boy_paadham_number,self.girl_nakshatra_number,self.girl_paadham_number,\
+              self.check_for_mahendra_porutham,self.check_for_vedha_porutham,self.check_for_rajju_porutham,self.check_for_shreedheerga_porutham)
         return matching_partners
 if __name__ == "__main__":
     #_generate_full_compatability_matrix()
@@ -428,14 +430,16 @@ if __name__ == "__main__":
     boy_paadham_number = None
     girl_nakshatra_number = 15
     girl_paadham_number = 1
-    check_for_mahendra_porutham=True
-    check_for_vedha_porutham=True
-    check_for_rajju_porutham=True
-    check_for_shreedheerga_porutham=True
+    check_for_mahendra_porutham=False
+    check_for_vedha_porutham=False
+    check_for_rajju_porutham=False
+    check_for_shreedheerga_porutham=False
     m = Match(boy_nakshatra_number=boy_nakshatra_number,boy_paadham_number=boy_paadham_number,girl_nakshatra_number=girl_nakshatra_number,girl_paadham_number=girl_paadham_number,\
               check_for_mahendra_porutham=check_for_mahendra_porutham,check_for_vedha_porutham=check_for_vedha_porutham,\
               check_for_rajju_porutham=check_for_rajju_porutham,check_for_shreedheerga_porutham=check_for_shreedheerga_porutham)
-    print(m.get_matching_partners())
+    mp = m.get_matching_partners()
+    mpl = len(mp)
+    #print(mpl,' matching stars found for',boy_nakshatra_number,boy_paadham_number,girl_nakshatra_number,girl_paadham_number,check_for_mahendra_porutham,check_for_vedha_porutham,check_for_rajju_porutham,check_for_shreedheerga_porutham)
     exit()
     a = Ashtakoota(boy_nakshatra_number,boy_paadham_number,girl_nakshatra_number,girl_paadham_number)
     ettu_porutham_results,compatibility_score,naalu_porutham_results = a.compatibility_score()
