@@ -651,6 +651,8 @@ class ChartWindow(QWidget):
         """
             Set whether mahendra porutham/koota is required for compatibility
             @param bool_value True or False. default:True
+                    True means - only those stars that match this porutham will be considered
+                    False means - it will considers all stars whether matches or not
         """
         self._mahendra_porutham = bool_value
         self._mahendra_porutham_checkbox.setChecked(bool_value)
@@ -658,6 +660,8 @@ class ChartWindow(QWidget):
         """
             Set whether vedha porutham/koota is required for compatibility
             @param bool_value True or False. default:True
+                    True means - only those stars that match this porutham will be considered
+                    False means - it will considers all stars whether matches or not
         """
         self._vedha_porutham = bool_value
         self._vedha_porutham_checkbox.setChecked(bool_value)
@@ -665,6 +669,8 @@ class ChartWindow(QWidget):
         """
             Set whether rajju porutham/koota is required for compatibility
             @param bool_value True or False. default:True
+                    True means - only those stars that match this porutham will be considered
+                    False means - it will considers all stars whether matches or not
         """
         self._rajju_porutham = bool_value
         self._rajju_porutham_checkbox.setChecked(bool_value)
@@ -672,6 +678,8 @@ class ChartWindow(QWidget):
         """
             Set whether sthree dheerga porutham/koota is required for compatibility
             @param bool_value True or False. default:True
+                    True means - only those stars that match this porutham will be considered
+                    False means - it will considers all stars whether matches or not
         """
         self._sthree_dheerga_porutham = bool_value
         self._sthree_dheerga_porutham_checkbox.setChecked(bool_value)
