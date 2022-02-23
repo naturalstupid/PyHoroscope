@@ -365,6 +365,7 @@ class Match:
             Exception("database file:"+db_file+" not found.")
         df=pd.read_csv(db_file,header=None,encoding='utf-8')
         self.match_db = df
+        self._gender = 'Female'
         self.boy_nakshatra_number = boy_nakshatra_number
         self.boy_paadham_number = boy_paadham_number
         self.girl_nakshatra_number = girl_nakshatra_number

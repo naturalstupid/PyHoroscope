@@ -65,10 +65,10 @@ class Horoscope():
             birth_time = birth_time.strip().replace('AM','').replace('PM','')
             btArr = birth_time.split(':')
             self.julian_day = swe.julday(self.date.year,self.date.month,self.date.day, int(btArr[0])+int(btArr[1])/60)
-            self.birth_time = panchanga.from_dms(int(btArr[0]),int(btArr[1]),0)
+            self.birth_time = (int(btArr[0]),int(btArr[1]),0)
             if (len(btArr)==3):
                 self.julian_day = swe.julday(self.date.year,self.date.month,self.date.day, int(btArr[0])+int(btArr[1])/60+int(btArr[2])/3600)
-                self.birth_time = panchanga.from_dms(int(btArr[0]),int(btArr[1]),int(btArr[2]))                
+                self.birth_time = (int(btArr[0]),int(btArr[1]),int(btArr[2]))                
         else:
             self.julian_day = panchanga.gregorian_to_jd(self.date)
         # Set Ayanamsa Mode
@@ -77,6 +77,9 @@ class Horoscope():
         panchanga.set_ayanamsa_mode(key,self.ayanamsa_value,self.julian_day)
         self.ayanamsa_value = panchanga.get_ayanamsa_value(self.julian_day)
         return
+    def _get_planet_list(self):
+        global PLANET_NAMES
+        return PLANET_NAMES
     def _get_calendar_resource_strings(self, language='en'):
       inpFile = 'list_values_'+language+'.txt'
       msgFile = 'msg_strings_'+language+'.txt'
@@ -195,7 +198,25 @@ class Horoscope():
                 horoscope_charts[chart_counter][planet_house] += planet_name + "\n"
                 relative_planet_house = panchanga.get_relative_house_of_planet(asc_house, planet_house)
                 horoscope_info[k]=v + [relative_planet_house]
-            
+        # Shadow Sub Planet information
+        dob = panchanga.Date(self.date.year,self.date.month,self.date.day)
+        tob = self.birth_time
+        jd = self.julian_day
+        as_string=True
+        k = cal_key_list['raasi_str']+'-'+cal_key_list['upagraha_str']
+        horoscope_info[k]=''
+        sub_planet_list_1 = {'kaala_str':'kaala_longitude','mrityu_str':'mrityu_longitude','artha_str':'artha_praharaka_longitude','yama_str':'yama_ghantaka_longitude',
+                           'gulika_str':'gulika_longitude','maandi_str':'maandi_longitude'}
+        sub_planet_list_2 = ['dhuma','vyatipaata','parivesha','indrachaapa','upaketu']
+        place = panchanga.Place(self.place_name,self.latitude,self.longitude,self.timezone_offset)
+        for sp,sp_func in sub_planet_list_1.items():
+            k = cal_key_list['raasi_str']+'-'+cal_key_list[sp]
+            v = eval('panchanga.'+sp_func+'(dob,tob,place,as_string='+str(as_string)+')')
+            horoscope_info[k]=v
+        for sp in sub_planet_list_2:
+            k = cal_key_list['raasi_str']+'-'+cal_key_list[sp+'_str']
+            v = eval('panchanga.'+'solar_upagraha_longitudes(jd,sp,as_string='+str(as_string)+')')
+            horoscope_info[k]=v
         ## Dhasavarga Charts
         ascendant_longitude = panchanga.ascendant(jd,place,as_string=False)[1]
         for dhasavarga_factor in dhasavarga_dict.keys():

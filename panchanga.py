@@ -69,6 +69,15 @@ Place = struct('Place', ['Place','latitude', 'longitude', 'timezone'])
 sidereal_year = 365.256360417   # From WolframAlpha
 human_life_span_for_dhasa = 120. ## years
 vimsottari_year = sidereal_year  # some say 360 days, others 365.25 or 365.2563 etc
+"""
+# Planet Rulers of the 8 parts of the DAY and NIGHT
+# Column = Weekday (0=Sun,1=Mon..7=Sat)
+# Row= part of the day (0-7) =< (1st-8th) part of the day
+# Value of the cell is the planet 0=>Sun, 1=>Moon, .. 6=>Saturn) 
+# -1 means no ruler at that part of the day
+"""
+day_rulers = [[0,1,2,3,4,5,6,-1],[1,2,3,4,5,6,-1,0],[2,3,4,5,6,-1,0,1],[3,4,5,6,-1,0,1,2],[4,5,6,-1,0,1,2,3],[5,6,-1,0,1,2,3,4],[6,-1,0,1,2,3,4,5]]
+night_rulers = [[4,5,6,-1,0,1,2,3],[5,6,-1,0,1,2,3,4],[6,-1,0,1,2,3,4,5],[0,1,2,3,4,5,6,-1],[1,2,3,4,5,6,-1,0],[2,3,4,5,6,-1,0,1],[3,4,5,6,-1,0,1,2]]
 
 # Nakshatra lords, order matters. See https://en.wikipedia.org/wiki/Dasha_(astrology)
 adhipati_list = [ swe.KETU, swe.VENUS, swe.SUN, swe.MOON, swe.MARS,
@@ -341,7 +350,7 @@ def to_dms(deg,as_string=False, is_lat_long=None):
       next_day = ' (+'+str(q)+')'
 #      print('d=',d)
   #"""
-  if d > 12:
+  if d >= 12:
       ampm = pm
   if m==60:
       d += 1
@@ -494,7 +503,21 @@ def sidereal_longitude(jd, planet):
 
 solar_longitude = lambda jd: sidereal_longitude(jd, swe.SUN)
 lunar_longitude = lambda jd: sidereal_longitude(jd, swe.MOON)
-
+### Upagraha longitudes
+dhuma_longitude = lambda jd: (solar_longitude(jd)+133+20.0/60) % 360
+vyatipaata_longitude = lambda jd: (360.0 - dhuma_longitude(jd))
+parivesha_longitude = lambda jd: (vyatipaata_longitude(jd)+180.0) % 360
+indrachaapa_longitude = lambda jd: (360.0-parivesha_longitude(jd))
+upaketu_longitude = lambda jd: (solar_longitude(jd)-30.0)
+def solar_upagraha_longitudes(jd,upagraha,as_string=False):
+    solar_upagraha_list = ['dhuma','vyatipaata','parivesha','indrachaapa','upaketu']
+    if upagraha.lower() in solar_upagraha_list:
+        long = eval(upagraha+"_longitude(jd)")
+        constellation = int(long/30)
+        if as_string:
+            return RAASI_LIST[constellation]+' '+to_dms(long-constellation*30,True,'plong')
+        else:
+            return [constellation,long]
 def sunrise(jd, place,as_string=False):
   """Sunrise when centre of disc is at horizon for given date and place"""
   city,lat, lon, tz = place
@@ -1400,6 +1423,84 @@ def tamil_date(date_in,jd, place):
 #    print('sun long',sr,'at',dt)
     daycount+=1
   return daycount
+"""
+  Kaala rises at the middle of Sun’s part. In other words, we find the time at the
+  middle of Sun’s part and find lagna rising then. That gives Kaala’s longitude.
+"""
+kaala_longitude = lambda dob,tob,place,as_string=False: upagraha_longitude(dob,tob,place,0,'middle',as_string=as_string)
+""" Mrityu rises at the middle of Mars’s part."""
+mrityu_longitude = lambda dob,tob,place,as_string=False: upagraha_longitude(dob,tob,place,2,'middle',as_string=as_string)
+""" Artha Praharaka rises at the middle of Mercury’s part."""
+artha_praharaka_longitude = lambda dob,tob,place,as_string=False: upagraha_longitude(dob,tob,place,3,'middle',as_string=as_string)
+""" Yama Ghantaka rises at the middle of Jupiter’s part. """
+yama_ghantaka_longitude = lambda dob,tob,place,as_string=False: upagraha_longitude(dob,tob,place,4,'middle',as_string=as_string)
+""" Gulika rises at the middle of Saturn’s part. """
+gulika_longitude = lambda dob,tob,place,as_string=False: upagraha_longitude(dob,tob,place,6,'middle',as_string=as_string)
+""" Maandi rises at the beginning of Saturn’s part. """
+maandi_longitude = lambda dob,tob,place,as_string=False: upagraha_longitude(dob,tob,place,6,'begin',as_string=as_string)
+
+def upagraha_longitude(dob,tob,place,planet_index,upagraha_part='middle',as_string=False):
+    """
+      get upagraha longitude from dob,tob, place-lat/long and day/night ruling planet's part
+      @param dob Date of birth as Date(year,month,day)
+      @param tob Time of birth as (hours,minutes,seconds)
+      @param planet_index 0=Sun, 1=Moon, 2=Mars, 3=Mercury,4=Jupiter, 5=Venus, 6=Saturn
+      @param upagraha_part = 'Middle' or 'Begin'
+      @param as_string = return results as string or list. True or False
+    """
+    jd_utc = gregorian_to_jd(Date(dob.year,dob.month,dob.day))
+    tz = place.timezone
+    day_rulers = [[0,1,2,3,4,5,6,-1],[1,2,3,4,5,6,-1,0],[2,3,4,5,6,-1,0,1],[3,4,5,6,-1,0,1,2],[4,5,6,-1,0,1,2,3],[5,6,-1,0,1,2,3,4],[6,-1,0,1,2,3,4,5]]
+    night_rulers = [[4,5,6,-1,0,1,2,3],[5,6,-1,0,1,2,3,4],[6,-1,0,1,2,3,4,5],[0,1,2,3,4,5,6,-1],[1,2,3,4,5,6,-1,0],[2,3,4,5,6,-1,0,1],[3,4,5,6,-1,0,1,2]]
+    day_number = vaara(jd_utc, as_string=False)
+    srise = sunrise(jd_utc, place, as_string=False)[1]
+    sset = sunset(jd_utc, place, as_string=False)[1]
+    srise = srise[0]+srise[1]/60.0+srise[2]/3600.0
+    sset = sset[0]+sset[1]/60.0+sset[2]/3600.0
+    planet_part = day_rulers[day_number].index(planet_index)            
+    tob_hrs = tob[0]+tob[1]/60.0+tob[2]/3600.0
+    if tob_hrs < srise: # Previous day sunset to today's sunrise
+        sset = sunset((jd_utc-1), place, as_string=False)[1]
+        sset = sset[0]+sset[1]/60.0+sset[2]/3600.0
+        planet_part = night_rulers[day_number].index(planet_index)
+    if tob_hrs > sset: # today's sunset to next sunrise
+        srise = sunrise((jd_utc+1), place, as_string=False)[1]
+        srise = srise[0]+srise[1]/60.0+srise[2]/3600.0
+        planet_part = night_rulers[day_number].index(planet_index)            
+    day_dur = abs(sset - srise)
+    one_part = day_dur/8.0
+    planet_start_time = srise + planet_part * one_part
+    if upagraha_part.lower()=='middle':
+        planet_end_time = srise + (planet_part+1)*one_part
+        planet_middle_time = 0.5*(planet_start_time+planet_end_time)
+        jd_kaala = swe.julday(dob.year,dob.month,dob.day,planet_middle_time)
+    else:
+        jd_kaala = swe.julday(dob.year,dob.month,dob.day,planet_start_time)
+    upagraha_long = ascendant(jd_kaala, place, False)[1]
+    constellation = int(upagraha_long / 30)
+    coordinates = to_dms(upagraha_long-constellation*30,as_string,is_lat_long='plong')
+    if as_string:
+        return RAASI_LIST[constellation]+' '+to_dms(upagraha_long-constellation*30,True,is_lat_long='plong')
+    return [constellation,upagraha_long-constellation*30]
 
 if __name__ == "__main__":
-    pass
+    read_lists_from_file('list_values_ta.txt')
+    isabel_hospital = Place('Chennai,IN',13.0389, 80.2619, +5.5)
+    dob = Date(1996,12,7)
+    tob = (20,23,0)
+    bs_dob = swe.julday(1996,12,7, 10+34.0/60)
+    jd_utc = gregorian_to_jd(Date(dob.year,dob.month,dob.day))
+    as_string = True
+
+    as_string = True
+    print('kaala_longitude',kaala_longitude(dob,tob,isabel_hospital,as_string=as_string))
+    print('mrityu_longitude',mrityu_longitude(dob,tob,isabel_hospital,as_string=as_string))
+    print('artha_praharaka_longitude',artha_praharaka_longitude(dob,tob,isabel_hospital,as_string=as_string))
+    print('yama_ghantaka_longitude',yama_ghantaka_longitude(dob,tob,isabel_hospital,as_string=as_string))
+    print('gulika_longitude',gulika_longitude(dob,tob,isabel_hospital,as_string=as_string))
+    print('maandi_longitude',maandi_longitude(dob,tob,isabel_hospital,as_string=as_string))
+    print('dhuma_longitude',solar_upagraha_longitudes(bs_dob,'dhuma',as_string))
+    print('vyatipaata_longitude',solar_upagraha_longitudes(bs_dob,'vyatipaata',as_string))
+    print('parivesha_longitude',solar_upagraha_longitudes(bs_dob,'parivesha',as_string))
+    print('indrachaapa_longitude',solar_upagraha_longitudes(bs_dob,'indrachaapa',as_string))
+    print('upaketu_longitude',solar_upagraha_longitudes(bs_dob,'upaketu',as_string))

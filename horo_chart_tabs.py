@@ -8,28 +8,37 @@ from PyQt6.QtCore import Qt
 from _datetime import datetime,timedelta,time,date
 import time as time_sleep
 import img2pdf
+
 panchanga = __import__('panchanga')
 horoscope = __import__('horoscope')
 compatibility = __import__('compatibility')
+ashtakavarga = __import__('ashtakavarga')
 
 sort_tuple = lambda tup,tup_index,reverse=False: sorted(tup,key = lambda x: x[tup_index],reverse=reverse)
 
 _images_path = './images/'
 """ UI Constants """
 _main_window_width = 650
-_main_window_height = 500 #630
+_main_window_height = 530 #630
 _comp_table_font_size = 7.8
+_info_label_font_size = 7.8
+_main_ui_label_button_font_size = 7
 _info_label1_height = 200
-_info_label2_height = 200
-_chart_info_label_width = 100
+_info_label2_height = _info_label1_height
+_chart_info_label_width = 250
+_chart_size_factor = 0.27
 _east_chart_house_x = 5
-_east_chart_house_y = 5
-_east_chart_house_width = 95
-_east_chart_house_height = 95
+_east_chart_house_y = _east_chart_house_x
+_east_chart_house_width = 110
+_east_chart_house_height = _east_chart_house_width
+_south_chart_house_x = 0
+_south_chart_house_y = 5
+_south_chart_house_width = 340
+_south_chart_house_height = _south_chart_house_width
 _north_chart_house_x = 5
-_north_chart_house_y = 5
-_north_chart_house_width = 67
-_north_chart_house_height = 67
+_north_chart_house_y = _north_chart_house_x
+_north_chart_house_width = 320
+_north_chart_house_height = _north_chart_house_width
 _north_label_positions = [(4/10,2/10),(1.5/10,0.5/10),(0.1/10,2/10),(1.5/10,4/10), 
                  (0.1/10,7/10), (1.75/10,8.5/10), (3.5/10,7/10), (6.75/10,8.5/10),
                  (8.5/10,7/10),(6.5/10,4/10),(8.35/10,2.0/10),(6.5/10,0.5/10)]
@@ -38,16 +47,21 @@ _footer_label_height = 26
 _lagnam_line_factor = 0.25
 _lagnam_line_thickness = 3
 _tab_names = ['panchangam_str','raasi_str','hora_str','drekkanam_str','saptamsam_str','navamsam_str',\
-              'dhasamsam_str','dhwadamsam_str','thrisamsam_str','sashtiamsam_str','dhasa_bhukthi_str','compatibility_str']
+              'dhasamsam_str','dhwadamsam_str','thrisamsam_str','sashtiamsam_str','dhasa_bhukthi_str',
+              'ashtaka_varga_str','compatibility_str']
 _dhasa_bhukthi_tab_start = 10
 _dhasa_bhukthi_tab_count = 3
 _dhasa_bhukthi_tab_end = _dhasa_bhukthi_tab_start + _dhasa_bhukthi_tab_count - 1
-_compatibility_tab_start = _dhasa_bhukthi_tab_end + 1
+_ashtaka_varga_tab_start = _dhasa_bhukthi_tab_end + 1
+""" 8 BAV/PAV-Raasi for each planet and Asc. One SAV-D1/SAV-D9. 8 BAV/PAV-D9 for each planet"""
+_ashtaka_varga_tab_count = len(_tab_names[1:_dhasa_bhukthi_tab_start])
+_ashtaka_varga_tab_end = _ashtaka_varga_tab_start + _ashtaka_varga_tab_count - 1
+_compatibility_tab_start = _ashtaka_varga_tab_end + 1 
  
 _tab_count = len(_tab_names)
 
 available_chart_types = {'south indian':"SouthIndianChart",'north indian':'NorthIndianChart','east indian':'EastIndianChart'}#,'Western'}
-available_languages = {"English":'en','Tamil':'ta','Telugu':'te','Hindi':"hi"}
+available_languages = {"English":'en','Tamil':'ta','Telugu':'te','Hindi':"hi",'Kannada':'ka'}
 class EastIndianChart(QWidget):
     """
         Draws East Indian Natal Chart and labels the planets
@@ -62,7 +76,7 @@ class EastIndianChart(QWidget):
                    ['Ketu/Venus',    'Pluto',  'Mercury/Jupiter']
                 ]
     """
-    def __init__(self,data=None,*args):
+    def __init__(self,data=None,chart_size_factor = 1.0,*args):
         QWidget.__init__(self, *args)
         self._grid_layout = QGridLayout()
         self.setLayout(self._grid_layout)
@@ -72,8 +86,8 @@ class EastIndianChart(QWidget):
         self._asc_house = 0
         self.x = _east_chart_house_x
         self.y = _east_chart_house_y
-        self.house_width = _east_chart_house_width
-        self.house_height = _east_chart_house_height
+        self.house_width = _east_chart_house_width * chart_size_factor
+        self.house_height = _east_chart_house_height * chart_size_factor 
         self.data = data
         self._chart_title = ''
         if self.data==None:
@@ -81,8 +95,9 @@ class EastIndianChart(QWidget):
     def paintEvent(self, event):
         self.event = event
         self.set_east_indian_chart_data()#event)
-    def setData(self,data,chart_title=''):#,event=None):
+    def setData(self,data,chart_title='',chart_title_font_size=None):#,event=None):
         self._chart_title = chart_title
+        self._chart_title_font_size = chart_title_font_size
         self.data = data
         event = self.event
     def set_east_indian_chart_data(self):
@@ -167,7 +182,18 @@ class EastIndianChart(QWidget):
                     painter.drawLine(diag_start_x,diag_start_y,diag_end_x,diag_end_y)
                 # write chart title in center of the chart
                 elif center_cell and chart_title:
-                    painter.drawText(rect,Qt.AlignmentFlag.AlignCenter,chart_title)
+                    #painter.drawText(rect,Qt.AlignmentFlag.AlignCenter,chart_title)
+                    if self._chart_title_font_size != None:
+                        font = QFont()
+                        font.setPixelSize(self._chart_title_font_size)
+                        painter.setFont(font)                    
+                    painter.drawText(rect,Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignBottom,chart_title)
+                    """ reset painter """
+                    font = QFont()
+                    painter.setFont(font)                    
+                    rect_image = QtCore.QRect(cell_x+cell_width/2,cell_y,cell_width/2,cell_height/2)
+                    icon = QPixmap('./images/lord_ganesha2.jpg')
+                    painter.drawPixmap(rect_image, icon)
                 else:
                     painter.drawText(rect,Qt.AlignmentFlag.AlignCenter,cell)
             _label_counter += 1
@@ -182,19 +208,24 @@ class SouthIndianChart(QWidget):
                    ['Ketu'  , ''   , ''  , 'Mercury'],
                    [''      , 'Jupiter','','']]
     """
-    def __init__(self,data=None,*args):
+    def __init__(self,data=None,chart_size_factor = 1.0,*args):
         QWidget.__init__(self, *args)
         self._grid_layout = QGridLayout()
         self.setLayout(self._grid_layout)
         self.row_count = 4
         self.col_count = 4
-        self._asc_house = 0
-        self._grid_labels = []
-        self._initialize_south_indian_chart_labels(self._grid_layout)
-        if data:
-            set_south_indian_chart_data(data)
+        self._asc_house = (-1,-1)
+        self.x = _south_chart_house_x
+        self.y = _south_chart_house_y
+        self.house_width = _south_chart_house_width * chart_size_factor
+        self.house_height = _south_chart_house_height * chart_size_factor
+        self.data = data
+        self._chart_title = ''
+        if self.data==None:
+            self.data = ['','','','','','','','','','','','']
     def paintEvent(self, event):
-        painter = QPainter(self)
+        self.event = event
+        """
         house_x = self._grid_labels[self._asc_house].x()
         house_y = self._grid_labels[self._asc_house].y()
         house_width = self._grid_labels[self._asc_house].width()
@@ -205,60 +236,84 @@ class SouthIndianChart(QWidget):
         line_end_y = house_y
         painter.setPen(QPen(Qt.GlobalColor.black,_lagnam_line_thickness))
         painter.drawLine(line_start_x,line_start_y,line_end_x,line_end_y)
-    def _initialize_south_indian_chart_labels(self,grid_layout):
-        _label_counter = 0
-        row_count = self.row_count
-        col_count = self.col_count
-        chart_title = ''
-        for row in range(row_count):
-            for col in range(col_count):
-                    self._grid_labels.append(QLabel(''))
-                    self._grid_layout.addWidget(self._grid_labels[_label_counter],row,col)
-                    _label_counter += 1
-        
-    def set_south_indian_chart_data(self, data, cell_width=75, cell_height=75, chart_title = None,image_icon_path=_images_path+"/lord_ganesha2.jpg"):
+        """
+        self.set_south_indian_chart_data()#event)
+    def setData(self,data,chart_title='',chart_title_font_size=None):#,event=None):
+        self._chart_title = chart_title
+        self._chart_title_font_size = chart_title_font_size
+        self.data = data
+        event = self.event
+    def set_south_indian_chart_data(self):#, data,chart_title=''):
         """
         Sets the planet labels on to the south indian natal chart
         @param data: 2-D List of planet names in native language
-        @param cell_width - in pixels 
-        @param cell_height - in pixels
         @chart_title - title of chart (e.g. Raasi, Navamsam) to be displayed in the center of chart
-        @image_icon_path - path of 50x50 pixel image you want to display in center of chart
         NOTE: For South Indian Chart - inner cells of 2-D list should have empty labels
         Example: [ ['Saturn','Moon','Sun', 'Mars'],
                    ['Lagnam', ''   , ''  , 'Ragu'],
                    ['Ketu'  , ''   , ''  , 'Mercury'],
                    [''      , 'Jupiter','','']]
         """
+        painter = QPainter(self)
+        data = self.data
+        chart_title = self._chart_title        
         row_count = len(data)
         col_count = len(data[0])
+        row_count = len(data)
+        col_count = len(data[0])
+        chart_width = self.house_width
+        chart_height = self.house_height
+        cell_width =  chart_width/self.col_count
+        cell_height = chart_height/self.row_count
         _label_counter = 0
         for row in range(row_count):
             for col in range(col_count):
-                cell = data[row][col]
-                position = (row,col)
+                cell_text = data[row][col]
+                cell_x = self.x + col * cell_width
+                cell_y = self.y + row * cell_height
+                cell_rect = QtCore.QRect(cell_x,cell_y,cell_width,cell_height)
                 if row==0 or row==row_count-1 or col==0 or col==col_count-1:
-                    self._grid_labels[_label_counter].setText(cell)
-                    self._grid_labels[_label_counter].setFixedHeight(cell_height)
-                    self._grid_labels[_label_counter].setFixedWidth(cell_width)
-                    self._grid_labels[_label_counter].setStyleSheet("border: 1px solid black;")
-                # write chart title in center of the chart
-                if row == (row_count/2)-1 and col==(col_count/2) and chart_title:
-                    self._grid_labels[_label_counter].setText(chart_title)
-                if row == (row_count/2) and col==(col_count/2)-1 and chart_title:
-                    self._grid_labels[_label_counter].setPixmap(QtGui.QPixmap(_images_path+"lord_ganesha2.jpg"))
+                    painter.drawRect(cell_rect)
+                    painter.drawText(cell_rect,Qt.AlignmentFlag.AlignCenter,cell_text)
+                    if row == self._asc_house[0] and col == self._asc_house[1]:
+                        line_start_x = cell_x
+                        line_start_y = cell_y + _lagnam_line_factor * cell_height
+                        line_end_x = cell_x + _lagnam_line_factor * cell_width
+                        line_end_y = cell_y
+                        #painter.setPen(QPen(Qt.GlobalColor.black,_lagnam_line_thickness))
+                        painter.drawLine(line_start_x,line_start_y,line_end_x,line_end_y)
+                # draw chart title  and icon in center of the chart
+                if row == (row_count/2)-1 and col==(col_count/2)-1 and chart_title:
+                    cell_x = self.x + col * cell_width
+                    cell_y = self.y + (row)*cell_height
+                    cell_rect = QtCore.QRect(cell_x,cell_y,2*cell_width,cell_height)
+                    if self._chart_title_font_size != None:
+                        font = QFont()
+                        font.setPixelSize(self._chart_title_font_size)
+                        painter.setFont(font)                    
+                    painter.drawText(cell_rect,Qt.AlignmentFlag.AlignCenter,chart_title)
+                    """ reset painter """
+                    font = QFont()
+                    painter.setFont(font)                    
+                if row == (row_count/2) and col==(col_count/2) and chart_title:
+                    cell_x = self.x + col*cell_width
+                    cell_y = self.y + (row)*cell_height
+                    cell_rect = QtCore.QRect(cell_x,cell_y,cell_width,cell_height)
+                    icon = QPixmap('./images/lord_ganesha2.jpg')
+                    painter.drawPixmap(cell_rect, icon)
                 _label_counter += 1
 class NorthIndianChart(QWidget):
-    def __init__(self,data=None):
+    def __init__(self,data=None,chart_size_factor = 1.0):
         QWidget.__init__(self)
         self.row_count = 4
         self.col_count = 4
         self.data = data
         self.x = _north_chart_house_x
         self.y = _north_chart_house_y
-        self.house_width = _north_chart_house_width
-        self.house_height = _north_chart_house_height
+        self.house_width = _north_chart_house_width * chart_size_factor
+        self.house_height = _north_chart_house_height * chart_size_factor
         self.resources=[]
+        self._chart_title = ''
         self._grid_labels = []
         self.label_positions = _north_label_positions
         if self.data==None:
@@ -266,13 +321,17 @@ class NorthIndianChart(QWidget):
     def paintEvent(self, event):
         self.event = event
         self._draw_north_indian_chart()#event)
-    def setData(self,data):#,event=None):
+    def setData(self,data,chart_title='',chart_title_font_size=None):#,event=None):
         self.data = data
+        self._chart_title_font_size = chart_title_font_size
+        self._chart_title = chart_title
         event = self.event
     def _draw_north_indian_chart(self):#,event):
         painter = QPainter(self)
-        chart_width = self.col_count * self.house_width
-        chart_height = self.row_count * self.house_height
+        chart_width = self.house_width
+        chart_height = self.house_height
+        cell_width = chart_width / self.col_count
+        cell_height = chart_height / self.row_count
         # first draw a square 
         rect = QtCore.QRect(self.x,self.y,chart_width,chart_height)
         painter.drawRect(rect)
@@ -308,35 +367,56 @@ class NorthIndianChart(QWidget):
         end_x = self.x
         end_y = self.y + chart_height / 2
         painter.drawLine(start_x,start_y,end_x,end_y) 
-        chart_width = self.col_count * self.house_width
-        chart_height = self.row_count * self.house_height
+        title_x = self.x + chart_width/3
+        title_y = self.y + chart_height + self.y
+        title_height = 20
+        title_width = chart_width
+        title_rect = QtCore.QRect(title_x,title_y,title_width,title_height)
+        if self._chart_title_font_size != None:
+            font = QFont()
+            font.setPixelSize(self._chart_title_font_size)
+            painter.setFont(font)                    
+        painter.drawText(title_rect,0,self._chart_title)
+        """ reset painter """
+        font = QFont()
+        painter.setFont(font)                    
         _label_counter = 0
         for l, pos in enumerate(self.label_positions):
             x = pos[0]
             y = pos[1]
-            label_text = self.data[l]
+            label_text = str(self.data[l])
             label_x = self.x + x*chart_width
             label_y = self.y + y*chart_height
-            painter.drawText(QtCore.QRect(label_x,label_y,self.house_width,self.house_height),0,label_text)
+            cell_height = chart_height / self.row_count
+            cell_width = chart_width / self.col_count
+            cell_rect = QtCore.QRect(label_x,label_y,cell_width,cell_height)
+            painter.drawText(cell_rect,0,label_text)
             _label_counter += 1
         painter.end()
 class ChartWindow(QWidget):
-    def __init__(self,chart_type='south indian'):
+    def __init__(self,chart_type='south indian',show_marriage_compatibility=True):
         super().__init__()
+        self._show_compatibility = show_marriage_compatibility
         self._init_main_window()
         self._v_layout = QVBoxLayout()
         self._create_row1_ui()
         self._create_row2_ui()
-        self._create_row3_ui()
+        if self._show_compatibility:
+                self._create_row3_ui()
         self.tabWidget = QTabWidget()
         self._v_layout.addWidget(self.tabWidget)
-        self.tabNames = _tab_names #["Panchangam","Rasi/Navamsam"]#,"Navamsam":''}
+        if self._show_compatibility:
+            self.tabNames = _tab_names
+        else:
+            self.tabNames = _tab_names[:-1]
         self.tabCount = len(self.tabNames)
         self.horo_tabs = []
         self._charts = []
+        self._ashtaka_charts = []
         self._chart_info_labels= []
         self.match_tables = [[ QTableWidget(13,4) for i in range(2)] for j in range(10)]
         self.db_tables =  []
+        self._matching_star_list = QListWidget()
         self._compatibility_tab_count = 0
         t = 0
         for tabName in self.tabNames:
@@ -345,10 +425,13 @@ class ChartWindow(QWidget):
             if t==0:
                 self._init_panchanga_tab_widgets(t)
                 t+=1
-            elif t==_dhasa_bhukthi_tab_start:#self.tabCount-2:
+            elif t==_dhasa_bhukthi_tab_start:
                 self._init_dhasa_bhukthi_tab_widgets(t)
                 t += _dhasa_bhukthi_tab_count
-            elif t==_compatibility_tab_start:
+            elif t==_ashtaka_varga_tab_start:
+                self._init_ashtaka_tab_widgets(t)
+                t += _ashtaka_varga_tab_count
+            elif self._show_compatibility and t==_compatibility_tab_start:
                 self._init_compatibility_tab_widgets(t)
                 t += 1 # 10 tabs created for compatibility
             else:
@@ -413,11 +496,29 @@ class ChartWindow(QWidget):
         h_layout.addWidget(self._charts[tab_index-1])
         self._chart_info_labels.append(QLabel('Chart Information'))
         h_layout.addWidget(self._chart_info_labels[tab_index-1])
+        self._chart_info_labels[tab_index-1].setStyleSheet('font-size:'+str(_info_label_font_size)+'pt')
         h_layout.setSpacing(0)
         #self._add_footer_to_chart()
         self._charts[tab_index-1].update()
         #self._chart2.update()
         self.horo_tabs[tab_index].setLayout(h_layout)
+    def _init_ashtaka_tab_widgets(self, tab_index):
+        # create extra tabs depending on the count
+        for t in range(1,_ashtaka_varga_tab_count):
+            self.horo_tabs.append(QWidget())
+            self.tabWidget.addTab(self.horo_tabs[tab_index+t],'')
+        #print('_init_ashtaka_tab_widgets',tab_index)
+        """ create 9x9 chart grid. 1st one SAV and others are 8 planet BAV """
+        for t in range(_ashtaka_varga_tab_count):
+            self._ashtaka_grid_layout = QGridLayout()
+            self._ashtaka_charts.append([(eval(available_chart_types[self._chart_type])(chart_size_factor=_chart_size_factor)) for i in range(9)])
+            ac = 0
+            for i in range(3):
+                for j in range(3):
+                    self._ashtaka_grid_layout.addWidget(self._ashtaka_charts[t][ac],i,j)
+                    ac+=1
+            self._ashtaka_grid_layout.setSpacing(0)
+            self.horo_tabs[tab_index+t].setLayout(self._ashtaka_grid_layout)
     def _init_main_window(self):
         fp = open('./program_inputs.txt', encoding='utf-8', mode='r')
         window_title = fp.readline().split('=')[1]
@@ -654,8 +755,9 @@ class ChartWindow(QWidget):
                     True means - only those stars that match this porutham will be considered
                     False means - it will considers all stars whether matches or not
         """
-        self._mahendra_porutham = bool_value
-        self._mahendra_porutham_checkbox.setChecked(bool_value)
+        if self._show_compatibility:
+            self._mahendra_porutham = bool_value
+            self._mahendra_porutham_checkbox.setChecked(bool_value)
     def vedha_porutham(self, bool_value:bool=True):
         """
             Set whether vedha porutham/koota is required for compatibility
@@ -663,8 +765,9 @@ class ChartWindow(QWidget):
                     True means - only those stars that match this porutham will be considered
                     False means - it will considers all stars whether matches or not
         """
-        self._vedha_porutham = bool_value
-        self._vedha_porutham_checkbox.setChecked(bool_value)
+        if self._show_compatibility:
+            self._vedha_porutham = bool_value
+            self._vedha_porutham_checkbox.setChecked(bool_value)
     def rajju_porutham(self, bool_value:bool=True):
         """
             Set whether rajju porutham/koota is required for compatibility
@@ -672,8 +775,9 @@ class ChartWindow(QWidget):
                     True means - only those stars that match this porutham will be considered
                     False means - it will considers all stars whether matches or not
         """
-        self._rajju_porutham = bool_value
-        self._rajju_porutham_checkbox.setChecked(bool_value)
+        if self._show_compatibility:
+            self._rajju_porutham = bool_value
+            self._rajju_porutham_checkbox.setChecked(bool_value)
     def sthree_dheerga_porutham(self, bool_value:bool=True):
         """
             Set whether sthree dheerga porutham/koota is required for compatibility
@@ -681,14 +785,15 @@ class ChartWindow(QWidget):
                     True means - only those stars that match this porutham will be considered
                     False means - it will considers all stars whether matches or not
         """
-        self._sthree_dheerga_porutham = bool_value
-        self._sthree_dheerga_porutham_checkbox.setChecked(bool_value)
+        if self._show_compatibility:
+            self._sthree_dheerga_porutham = bool_value
+            self._sthree_dheerga_porutham_checkbox.setChecked(bool_value)
     def minimum_compatibility_score(self,minm_comp_score:float=18.0):
         """
             Set minimum score required for marriage compatibility
             @param minm_comp_score: float in range(0.0,35.0,0.5) 
         """
-        if minm_comp_score>0.0 and minm_comp_score < 36.5:
+        if self._show_compatibility and  minm_comp_score>0.0 and minm_comp_score < 36.5:
             self._minimum_score = minm_comp_score
             self._min_score_combo.setValue(minm_comp_score)
     def _validate_ui(self):
@@ -705,34 +810,48 @@ class ChartWindow(QWidget):
             if self.resources:
                 msgs = self.resources
                 self._name_label.setText(msgs['name_str'])
+                self._name_label.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._name_label.setToolTip(msgs['name_tooltip_str'])
                 self._place_label.setText(msgs['place_str'])
+                self._place_label.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._place_label.setToolTip(msgs['place_tooltip_str'])
                 self._lat_label.setText(msgs['latitude_str'])
+                self._lat_label.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._lat_label.setToolTip(msgs['latitude_tooltip_str'])
                 self._long_label.setText(msgs['longitude_str'])
+                self._long_label.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._long_label.setToolTip(msgs['longitude_tooltip_str'])
                 self._tz_label.setText(msgs['timezone_offset_str'])
+                self._tz_label.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._tz_label.setToolTip(msgs['timezone_tooltip_str'])
                 self._dob_label.setText(msgs['date_of_birth_str'])
+                self._dob_label.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._dob_label.setToolTip(msgs['dob_tooltip_str'])
                 self._tob_label.setText(msgs['time_of_birth_str'])
+                self._tob_label.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._tob_label.setToolTip(msgs['tob_tooltip_str'])
                 self._ayanamsa_combo.setToolTip(msgs['ayanamsa_tooltip_str'])
                 self._lang_combo.setToolTip(msgs['language_tooltip_str'])
                 self._compute_button.setText(msgs['show_chart_str'])
+                self._compute_button.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._compute_button.setToolTip(msgs['compute_tooltip_str'])
                 self._save_image_button.setText(msgs['save_pdf_str'])
+                self._save_image_button.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._save_image_button.setToolTip(msgs['savepdf_tooltip_str'])
-                self._mahendra_porutham_checkbox.setText(msgs['mahendra_str'].split()[0])
+                self._mahendra_porutham_checkbox.setText(msgs['mahendra_str'])#.split()[0])
+                self._mahendra_porutham_checkbox.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._mahendra_porutham_checkbox.setToolTip(msgs['mahendra_tooltip_str'])
-                self._vedha_porutham_checkbox.setText(msgs['vedha_str'].split()[0])
+                self._vedha_porutham_checkbox.setText(msgs['vedha_str'])#.split()[0])
+                self._vedha_porutham_checkbox.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._vedha_porutham_checkbox.setToolTip(msgs['vedha_tooltip_str'])
-                self._rajju_porutham_checkbox.setText(msgs['rajju_str'].split()[0])
+                self._rajju_porutham_checkbox.setText(msgs['rajju_str'])#.split()[0])
+                self._rajju_porutham_checkbox.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._rajju_porutham_checkbox.setToolTip(msgs['rajju_tooltip_str'])
-                self._sthree_dheerga_porutham_checkbox.setText(msgs['sthree_dheerga_str'].split()[0])
+                self._sthree_dheerga_porutham_checkbox.setText(msgs['sthree_dheerga_str'])#.split()[0])
+                self._sthree_dheerga_porutham_checkbox.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._sthree_dheerga_porutham_checkbox.setToolTip(msgs['sthree_dheerga_tooltip_str'])
                 self._min_score_label.setText(msgs['min_score_label_str'])
+                self._min_score_label.setStyleSheet('font-size:'+str(_main_ui_label_button_font_size)+'pt')
                 self._min_score_label.setToolTip(msgs['min_score_tooltip_str'])
                 self.update()
         except:
@@ -880,41 +999,51 @@ class ChartWindow(QWidget):
         key = self.resources['saka_year_str']
         value = self._calendar_info[key]
         info_str += format_str % (key,value)
+        key = self.resources['vaaram_str']
+        value = self._calendar_info[key]
+        info_str += format_str % (key,value)
         self._info_label2.setText(info_str)
     def _update_tabs_with_divisional_charts(self,jd,place):
-        for t,tab in enumerate(_tab_names[0:-2]):
+        i_end = 0
+        format_str = '%-18s%-20s\n'
+        for t,tab in enumerate(_tab_names[0:_dhasa_bhukthi_tab_start]):
             tab_name = self.resources[tab]
             self.tabWidget.setTabText(t,tab_name)
             """ update the chart from horoscope charts """
-            if t>0 : #or t<len(_tab_names):
-                i_start = (t-1)*10
+            if t>0:
+                i_start = i_end # (t-1)*10
                 i_end = i_start + 10
+                if t==1: # Raasi Chart Include Upagraha details as well
+                    i_end = i_start + 22 # to incude extra 12 rows for upagraha details 
                 chart_info = ''
                 for k,v in list(self._horoscope_info.items())[i_start:i_end]:
                     k1 = k.split('-')[-1]
                     v1 = v.split('-')[0]
-                    chart_info +='%-15s%-20s\n' % (k1,v1)
+                    chart_info += format_str % (k1,v1)
                 self._chart_info_labels[t-1].setText(chart_info)
+                self._chart_info_labels[t-1].setMaximumWidth(_chart_info_label_width)
                 chart_data_1d = self._horoscope_charts[t-1]
                 chart_data_1d = [x[:-1] for x in chart_data_1d]
                 if self._chart_type.lower() == 'north indian':
                     _ascendant = panchanga.ascendant(jd,place,False)
                     asc_house = _ascendant[0]+1
                     chart_data_north = chart_data_1d[asc_house-1:]+chart_data_1d[0:asc_house-1]
-                    self._charts[t-1].setData(chart_data_north)
-                    self._charts[t-1].update()
+                    self._charts[t-1].setData(chart_data_north,chart_title=tab_name)
+                    #self._charts[t-1].update()
                 elif self._chart_type.lower() == 'east indian':
                     chart_data_2d = _convert_1d_house_data_to_2d(chart_data_1d,self._chart_type)
                     row,col = _get_row_col_string_match_from_2d_list(chart_data_2d,self.resources['ascendant_str'])
                     self._charts[t-1]._asc_house = row*self._charts[t-1].row_count+col
                     self._charts[t-1].setData(chart_data_2d,chart_title=tab_name)
-                    self._charts[t-1].update()
+                    #self._charts[t-1].update()
                 else: # south indian
                     chart_data_2d = _convert_1d_house_data_to_2d(chart_data_1d)
                     row,col = _get_row_col_string_match_from_2d_list(chart_data_2d,self.resources['ascendant_str'])
-                    self._charts[t-1]._asc_house = row*self._charts[t-1].row_count+col
-                    self._charts[t-1].set_south_indian_chart_data(chart_data_2d,chart_title=tab_name,image_icon_path=self._image_icon_path)
-                    self._charts[t-1].update()                           
+                    self._charts[t-1]._asc_house = (row,col) #row*self._charts[t-1].row_count+col
+                    self._charts[t-1].setData(chart_data_2d,chart_title=tab_name)
+                    #self._charts[t-1].set_south_indian_chart_data(chart_data_2d,chart_title=tab_name,image_icon_path=self._image_icon_path)
+                self._charts[t-1].parent().layout().setSpacing(0)
+                self._charts[t-1].update()
     def _update_tab_chart_information(self):
         jd = self._horo.julian_day  # For ascendant and planetary positions, dasa buthi - use birth time
         place = panchanga.Place(self._place_name,float(self._latitude),float(self._longitude),float(self._time_zone))
@@ -944,6 +1073,57 @@ class ChartWindow(QWidget):
                 self.db_tables[db_tab][col].resizeColumnToContents(0)
                 self.db_tables[db_tab][col].resizeColumnToContents(1)
             self.tabWidget.setTabText(_dhasa_bhukthi_tab_start+db_tab,tab_title+'-'+str(db_tab+1))
+    def _convert_language_chart_to_english(self,rasi_1d_lang):
+        planet_list_lang = self._horo._get_planet_list()+[self.resources['ascendant_str']]
+        #print(planet_list_lang)
+        planet_list_en = ['Sun ☉','Moon ☾','Mars ♂','Mercury ☿','Jupiter ♃','Venus ♀','Saturn ♄','Raagu ☊','Kethu ☋','Uranus','Neptune','Pluto','Lagnam']
+        planet_lang_dict = {planet_list_lang[i]:planet_list_en[i] for i in range(len(planet_list_en))}
+        #rasi_1d_lang =['','சூரியன்/சந்திரன்','','செவ்வாய்','லக்னம்/புதன்','குரு','','சுக்ரன்','','சனி','ராகு','கேது']
+        for k,v in planet_lang_dict.items():
+            for i,house in enumerate(rasi_1d_lang):
+                if k in house:
+                    rasi_1d_lang[i] = rasi_1d_lang[i].replace(k,v)
+        return rasi_1d_lang
+    def _update_ashtaka_varga_tab_information(self):
+        jd = self._horo.julian_day  # For ascendant and planetary positions, dasa buthi - use birth time
+        place = panchanga.Place(self._place_name,float(self._latitude),float(self._longitude),float(self._time_zone))
+        tab_names = [self.resources[tab] for tab in _tab_names[1:_dhasa_bhukthi_tab_start]]
+        charts = [self._horoscope_charts[0],self._horoscope_charts[4]]
+        for t in range(_ashtaka_varga_tab_count):
+            tab_name = self.resources['ashtaka_varga_str']+'-'+tab_names[t]
+            self.tabWidget.setTabText(_ashtaka_varga_tab_start+t,tab_name)
+            chart_1d = self._horoscope_charts[t] #charts[t]
+            #print(chart_1d)
+            chart_1d_en = self._convert_language_chart_to_english(chart_1d)
+            #print(chart_1d_en)
+            #_convert_language_chart_to_english(chart_1d)
+            av,sav, pav = ashtakavarga.ashtaka_varga_chart(chart_1d_en)
+            ac = 0
+            for i in range(3):
+                for j in range(3):
+                    if ac ==0:
+                        chart_data_1d = sav
+                        chart_title = 'SAV'
+                    else:
+                        chart_data_1d = av[ac-1]
+                        chart_title = self._horo._get_planet_list()[ac-1]
+                    #print(chart_title,'chart_data_1d',chart_data_1d)
+                    if self._chart_type.lower() == 'north indian':
+                        _ascendant = panchanga.ascendant(jd,place,False)
+                        asc_house = _ascendant[0]+1
+                        #print('asc_house',asc_house)
+                        chart_data_north = chart_data_1d[asc_house-1:]+chart_data_1d[0:asc_house-1]
+                        self._ashtaka_charts[t][ac].setData(chart_data_north,chart_title=chart_title)
+                    elif self._chart_type.lower() == 'east indian':
+                        chart_data_2d = _convert_1d_house_data_to_2d(chart_data_1d,self._chart_type)
+                        self._ashtaka_charts[t][ac].setData(chart_data_2d,chart_title=chart_title,chart_title_font_size=8)
+                    else: # south indian
+                        chart_data_2d = _convert_1d_house_data_to_2d(chart_data_1d)
+                        self._ashtaka_charts[t][ac].setData(chart_data_2d,chart_title=chart_title,chart_title_font_size=7)
+                    self._ashtaka_charts[t][ac].parent().layout().setSpacing(0)
+                    self._ashtaka_charts[t][ac].update()
+                    ac += 1
+        
     def _update_compatibility_tab_information(self):
         self.tabWidget.setTabText(_compatibility_tab_start,self.resources['compatibility_str'])
         bn=None
@@ -1047,7 +1227,9 @@ class ChartWindow(QWidget):
         self._fill_information_label2(info_str, format_str)
         self._update_tab_chart_information()
         self._update_dhasa_bhukthi_tab_information()
-        self._update_compatibility_tab_information()
+        self._update_ashtaka_varga_tab_information()
+        if  self._show_compatibility:
+            self._update_compatibility_tab_information()
         self.update()
     def _get_place_latitude_longitude(self,place_name):
         result = panchanga.get_latitude_longitude_from_place_name(place_name)
@@ -1141,18 +1323,18 @@ def _convert_1d_house_data_to_2d(rasi_1d,chart_type='south indian'):
         for index, row in enumerate(map_to_2d):
             if 'south' in chart_type.lower():
                 i,j = [(index, row.index(p)) for index, row in enumerate(map_to_2d) if p in row][0]
-                rasi_2d[i][j] = val
+                rasi_2d[i][j] = str(val)
             elif 'east' in chart_type.lower():
                 p_index = _index_containing_substring(row,str(p))
                 if p_index != -1:
                     i,j = (index, p_index)
                     if rasi_2d[i][j] != 'X':
                         if index > 0:
-                            rasi_2d[i][j] += separator + val
+                            rasi_2d[i][j] += separator + str(val)
                         else:
-                            rasi_2d[i][j] = val + separator + rasi_2d[i][j]
+                            rasi_2d[i][j] = str(val) + separator + rasi_2d[i][j]
                     else:
-                        rasi_2d[i][j] = val
+                        rasi_2d[i][j] = str(val)
     for i in range(row_count):
         for j in range(col_count):
             if rasi_2d[i][j] == 'X':
@@ -1214,9 +1396,8 @@ if __name__ == "__main__":
     sys.excepthook = except_hook
     App = QApplication(sys.argv)
     chart_type = 'South'
-    chart = ChartWindow(chart_type=chart_type)
+    chart = ChartWindow(chart_type=chart_type,show_marriage_compatibility=True)
     chart.language('Tamil')
-    #"""
     chart.name('Bhuvana') #Rama
     chart.gender('Female')
     chart.place('Chennai,IN') #Ayodhya,IN
@@ -1226,23 +1407,11 @@ if __name__ == "__main__":
     chart.time_of_birth('10:34:00')#'12:30:00')
     chart.time_zone('5.5')
     chart.chart_type(chart_type)
-    chart.minimum_compatibility_score(20.0)
     chart.mahendra_porutham(False)
     chart.vedha_porutham(False)
     chart.rajju_porutham(False)
     chart.sthree_dheerga_porutham(False)
     #chart.ayanamsa_mode("SIDM_USER",0.0)
-    #"""
     chart.compute_horoscope()
     chart.show()
-    chart.save_as_pdf('delme.pdf')
-    #chart.exit()
-    #exit()
-    """
-    for year in range(499,899,100):
-        chart.date_of_birth(str(year)+',3,21')
-        QApplication.processEvents()
-        chart.compute_horoscope()
-        time_sleep.sleep(2)
-    """
     sys.exit(App.exec())

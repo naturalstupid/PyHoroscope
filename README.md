@@ -1,4 +1,4 @@
-PyHoroscope 0.9.6
+PyHoroscope 0.9.8
 =================
 
 Observational Indian lunisolar calendar, horoscope and matching using the Swiss ephemeris (Hindu
@@ -32,9 +32,10 @@ Also Included :
 * Rahu Kala, Yamaganda Kala, Gulika Kala
 * Abhijit muhurta and Durmuhurtams
 * Marriage compatibility details (0.9.6)
+* Ashtaka Varga (0.9.8)
 
-Available in English, Tamil and Telugu
------------------------------------------
+Available in English, Tamil and Telugu, Hindi(0.9.7) and Kannada (0.9.8)
+-------------------------------------------------------------------------
 
 You can add your own language by creating `list_values_xx.txt` and `msg_strings_xx.txt`	by copying the _en files and replacing with appropriate native language strings.
 
