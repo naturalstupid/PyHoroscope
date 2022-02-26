@@ -1,4 +1,4 @@
-PyHoroscope 0.9.8
+PyHoroscope 1.0.1
 =================
 
 Observational Indian lunisolar calendar, horoscope and matching using the Swiss ephemeris (Hindu
@@ -32,7 +32,7 @@ Also Included :
 * Rahu Kala, Yamaganda Kala, Gulika Kala
 * Abhijit muhurta and Durmuhurtams
 * Marriage compatibility details (0.9.6)
-* Special Lagnas and Upagrahas added to charts (0.9.8)
+* Special Lagnas and Upagrahas added to charts (1.0.1)
 * Ashtaka Varga charts and Shodhya pinda(0.9.8)
 * Print the UI as PDF (using img2pdf and pillow to combine two tabs into one page)
 
