@@ -32,7 +32,9 @@ Also Included :
 * Rahu Kala, Yamaganda Kala, Gulika Kala
 * Abhijit muhurta and Durmuhurtams
 * Marriage compatibility details (0.9.6)
-* Ashtaka Varga (0.9.8)
+* Special Lagnas and Upagrahas added to charts (0.9.8)
+* Ashtaka Varga charts and Shodhya pinda(0.9.8)
+* Print the UI as PDF (using img2pdf and pillow to combine two tabs into one page)
 
 Available in English, Tamil and Telugu, Hindi(0.9.7) and Kannada (0.9.8)
 -------------------------------------------------------------------------

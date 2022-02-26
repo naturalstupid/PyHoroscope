@@ -24,8 +24,10 @@
 import swisseph as swe
 from _datetime import datetime, timedelta
 from datetime import date
+
 panchanga = __import__('panchanga')
 
+dhasavarga_dict = {}
 class Horoscope():  
     def __init__(self,place_with_country_code=None,latitude=None,longitude=None,timezone_offset=None,date_in=None,birth_time=None,ayanamsa_mode="Lahiri",ayanamsa_value=None):
         self.place_name = place_with_country_code
@@ -78,15 +80,18 @@ class Horoscope():
         self.ayanamsa_value = panchanga.get_ayanamsa_value(self.julian_day)
         return
     def _get_planet_list(self):
-        global PLANET_NAMES
-        return PLANET_NAMES
+        global PLANET_NAMES,PLANET_SHORT_NAMES
+        return PLANET_NAMES,PLANET_SHORT_NAMES
+    def _get_raasi_list(self):
+        global RAASI_LIST,RAASI_SHORT_LIST
+        return RAASI_LIST,RAASI_SHORT_LIST
     def _get_calendar_resource_strings(self, language='en'):
       inpFile = 'list_values_'+language+'.txt'
       msgFile = 'msg_strings_'+language+'.txt'
       cal_key_list=panchanga.read_list_types_from_file(msgFile)
-      global PLANET_NAMES,NAKSHATRA_LIST,TITHI_LIST,RAASI_LIST,KARANA_LIST,DAYS_LIST,PAKSHA_LIST,YOGAM_LIST,MONTH_LIST,YEAR_LIST,DHASA_LIST,BHUKTHI_LIST
+      global PLANET_NAMES,NAKSHATRA_LIST,TITHI_LIST,RAASI_LIST,KARANA_LIST,DAYS_LIST,PAKSHA_LIST,YOGAM_LIST,MONTH_LIST,YEAR_LIST,DHASA_LIST,BHUKTHI_LIST,PLANET_SHORT_NAMES,RAASI_SHORT_LIST
       [PLANET_NAMES,NAKSHATRA_LIST,TITHI_LIST,RAASI_LIST,KARANA_LIST,DAYS_LIST,
-       PAKSHA_LIST,YOGAM_LIST,MONTH_LIST,YEAR_LIST,DHASA_LIST,BHUKTHI_LIST
+       PAKSHA_LIST,YOGAM_LIST,MONTH_LIST,YEAR_LIST,DHASA_LIST,BHUKTHI_LIST,PLANET_SHORT_NAMES,RAASI_SHORT_LIST
       ] = panchanga.read_lists_from_file(inpFile)
       return cal_key_list
     def get_calendar_information(self, language='en', as_string=False):
@@ -149,33 +154,63 @@ class Horoscope():
         _dhurmuhurtham = panchanga.durmuhurtam(jd,place,as_string)
         calendar_info[cal_key_list['dhurmuhurtham_str']] = _dhurmuhurtham
         return calendar_info
+    def get_horoscope_chart_counter(self,chart_key):
+        global dhasavarga_dict
+        value_list = list(dhasavarga_dict.values())
+        counter = [ index for index,value in enumerate(value_list) if chart_key in value][0]
+        return counter
     def get_horoscope_information(self,language='en', as_string=False):
         horoscope_info = {}
         cal_key_list = self._get_calendar_resource_strings(language)
+        global dhasavarga_dict
         dhasavarga_dict={2:cal_key_list['hora_str'],
                          3:cal_key_list['drekkanam_str'],
+                         4:cal_key_list['chaturthamsa_str'],
+                         5:cal_key_list['panchamsa_str'],
+                         6:cal_key_list['shashthamsa_str'],
                          7:cal_key_list['saptamsam_str'],
+                         8:cal_key_list['ashtamsa_str'],
                          9:cal_key_list['navamsam_str'],
                          10:cal_key_list['dhasamsam_str'],
-                         16:cal_key_list['dhwadamsam_str'],
+                         11:cal_key_list['rudramsa_str'],
+                         12:cal_key_list['dhwadamsam_str'],
+                         16:cal_key_list['shodamsa_str'],
+                         20:cal_key_list['vimsamsa_str'],
+                         24:cal_key_list['chaturvimsamsa_str'],
+                         27:cal_key_list['nakshatramsa_str'],
                          30:cal_key_list['thrisamsam_str'],
+                         40:cal_key_list['khavedamsa_str'],
+                         45:cal_key_list['akshavedamsa_str'],
                          60:cal_key_list['sashtiamsam_str']
         }
         jd = self.julian_day  # For ascendant and planetary positions, dasa buthi - use birth time
         place = panchanga.Place(self.place_name,self.latitude,self.longitude,self.timezone_offset)
+        dob = panchanga.Date(self.date.year,self.date.month,self.date.day)
+        bt=self.birth_time
+        tob = bt[0]+bt[1]/60.0+bt[2]/3600.0
+        as_string=True
         _ascendant = panchanga.ascendant(jd,place,as_string)
-#        horoscope_charts = [[ '' for y in range(len(dhasavarga_dict)+1) ]for x in range(len(RAASI_LIST))]
         horoscope_charts = [[ ''  for x in range(len(RAASI_LIST))] for y in range(len(dhasavarga_dict)+1)]
         chart_counter = 0
+        dhasa_varga_factor=1
+        key = cal_key_list['raasi_str']+'-'+cal_key_list['bhava_lagna_str']
+        value = panchanga.bhava_lagna(jd,place,tob,dhasa_varga_factor,as_string=True)
+        horoscope_info[key] = value
+        key = cal_key_list['raasi_str']+'-'+cal_key_list['hora_lagna_str']
+        value = panchanga.hora_lagna(jd,place,tob,dhasa_varga_factor,as_string=True)
+        horoscope_info[key] = value
+        key = cal_key_list['raasi_str']+'-'+cal_key_list['ghati_lagna_str']
+        value = panchanga.ghati_lagna(jd,place,tob,dhasa_varga_factor,as_string=True)
+        horoscope_info[key] = value
+        key = cal_key_list['raasi_str'] +'-'+cal_key_list['sree_lagna_str']
+        value = panchanga.sree_lagna(jd,place,dhasa_varga_factor,as_string=True)
+        horoscope_info[key] = value
         if as_string:
-            #asc_house = _ascendant[0]
-            #horoscope_charts[chart_counter][asc_house] += cal_key_list['ascendant_str'] +"\n"
             asc_house = RAASI_LIST.index(_ascendant.split()[0])
             horoscope_charts[chart_counter][asc_house] += cal_key_list['ascendant_str'] +"\n"
         else:
             asc_house = _ascendant[0]
             horoscope_charts[chart_counter][asc_house] += cal_key_list['ascendant_str'] +"\n"
-#        print('raasi','lagnam house',asc_house)
         horoscope_info[cal_key_list['raasi_str']+'-'+cal_key_list['ascendant_str']] = _ascendant
         # assign navamsa data
         planet_positions = panchanga.planetary_positions(jd,place,as_string)
@@ -199,10 +234,6 @@ class Horoscope():
                 relative_planet_house = panchanga.get_relative_house_of_planet(asc_house, planet_house)
                 horoscope_info[k]=v + [relative_planet_house]
         # Shadow Sub Planet information
-        dob = panchanga.Date(self.date.year,self.date.month,self.date.day)
-        tob = self.birth_time
-        jd = self.julian_day
-        as_string=True
         k = cal_key_list['raasi_str']+'-'+cal_key_list['upagraha_str']
         horoscope_info[k]=''
         sub_planet_list_1 = {'kaala_str':'kaala_longitude','mrityu_str':'mrityu_longitude','artha_str':'artha_praharaka_longitude','yama_str':'yama_ghantaka_longitude',
@@ -211,26 +242,38 @@ class Horoscope():
         place = panchanga.Place(self.place_name,self.latitude,self.longitude,self.timezone_offset)
         for sp,sp_func in sub_planet_list_1.items():
             k = cal_key_list['raasi_str']+'-'+cal_key_list[sp]
-            v = eval('panchanga.'+sp_func+'(dob,tob,place,as_string='+str(as_string)+')')
+            v = eval('panchanga.'+sp_func+'(dob,bt,place,dhasa_varga_factor=1,as_string='+str(as_string)+')')
             horoscope_info[k]=v
         for sp in sub_planet_list_2:
             k = cal_key_list['raasi_str']+'-'+cal_key_list[sp+'_str']
-            v = eval('panchanga.'+'solar_upagraha_longitudes(jd,sp,as_string='+str(as_string)+')')
+            v = eval('panchanga.'+'solar_upagraha_longitudes(jd,sp,dhasa_varga_factor=1,as_string='+str(as_string)+')')
             horoscope_info[k]=v
         ## Dhasavarga Charts
         ascendant_longitude = panchanga.ascendant(jd,place,as_string=False)[1]
         for dhasavarga_factor in dhasavarga_dict.keys():
+            ascendant_navamsa = panchanga.dasavarga_from_long(ascendant_longitude,dhasavarga_factor)
             if as_string:
-                ascendant_navamsa = RAASI_LIST[panchanga.dasavarga_from_long(ascendant_longitude,dhasavarga_factor)]
-                asc_house = RAASI_LIST.index(ascendant_navamsa)
+                asc_house = ascendant_navamsa[0]
                 chart_counter += 1 
                 horoscope_charts[chart_counter][asc_house] += cal_key_list['ascendant_str'] +"\n"
             else:
-                ascendant_navamsa = panchanga.dasavarga_from_long(ascendant_longitude,dhasavarga_factor)
-                asc_house = ascendant_navamsa
+                asc_house = ascendant_navamsa[0]
                 chart_counter += 1 
                 horoscope_charts[chart_counter][asc_house] += cal_key_list['ascendant_str'] +"\n"
-            horoscope_info[dhasavarga_dict[dhasavarga_factor] +'-'+cal_key_list['ascendant_str']]=ascendant_navamsa
+            key = dhasavarga_dict[dhasavarga_factor] +'-'+cal_key_list['bhava_lagna_str']
+            value = panchanga.bhava_lagna(jd,place,tob,dhasavarga_factor,as_string=True)
+            horoscope_info[key] = value
+            key = dhasavarga_dict[dhasavarga_factor] +'-'+cal_key_list['hora_lagna_str']
+            value = panchanga.hora_lagna(jd,place,tob,dhasavarga_factor,as_string=True)
+            horoscope_info[key] = value
+            key = dhasavarga_dict[dhasavarga_factor] +'-'+cal_key_list['ghati_lagna_str']
+            value = panchanga.ghati_lagna(jd,place,tob,dhasavarga_factor,as_string=True)
+            horoscope_info[key] = value
+            key = dhasavarga_dict[dhasavarga_factor] +'-'+cal_key_list['sree_lagna_str']
+            value = panchanga.sree_lagna(jd,place,dhasavarga_factor,as_string=True)
+            horoscope_info[key] = value
+            horoscope_info[dhasavarga_dict[dhasavarga_factor] +'-'+cal_key_list['ascendant_str']] = \
+            RAASI_LIST[ascendant_navamsa[0]]+' '+panchanga.to_dms(ascendant_navamsa[1],True,'plong')
             planet_positions = panchanga.dhasavarga(jd,place,dhasavarga_factor,as_string)
             for sublist in planet_positions:
                 #print('sublist',sublist)
@@ -251,6 +294,16 @@ class Horoscope():
                     horoscope_charts[chart_counter][planet_house] += planet_name +'\n'
                     relative_planet_house = panchanga.get_relative_house_of_planet(asc_house, planet_house)
                     horoscope_info[k]=v + [relative_planet_house]
+            k = dhasavarga_dict[dhasavarga_factor]+'-'+cal_key_list['upagraha_str']
+            horoscope_info[k]=''
+            for sp,sp_func in sub_planet_list_1.items():
+                k = dhasavarga_dict[dhasavarga_factor]+'-'+cal_key_list[sp]
+                v = eval('panchanga.'+sp_func+'(dob,bt,place,dhasa_varga_factor=dhasavarga_factor,as_string='+str(as_string)+')')
+                horoscope_info[k]=v
+            for sp in sub_planet_list_2:
+                k = dhasavarga_dict[dhasavarga_factor]+'-'+cal_key_list[sp+'_str']
+                v = eval('panchanga.'+'solar_upagraha_longitudes(jd,sp,dhasa_varga_factor=dhasavarga_factor,as_string='+str(as_string)+')')
+                horoscope_info[k]=v
         #print(horoscope_charts)
 #       Get Dhasa Bkukthi
         jd = self.julian_day

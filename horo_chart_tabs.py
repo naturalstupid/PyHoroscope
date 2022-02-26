@@ -8,6 +8,8 @@ from PyQt6.QtCore import Qt
 from _datetime import datetime,timedelta,time,date
 import time as time_sleep
 import img2pdf
+from PIL import Image
+import numpy as np
 
 panchanga = __import__('panchanga')
 horoscope = __import__('horoscope')
@@ -21,21 +23,22 @@ _images_path = './images/'
 _main_window_width = 650
 _main_window_height = 530 #630
 _comp_table_font_size = 7.8
-_info_label_font_size = 7.8
+_ashtaka_table_font_size = 7.1
+_info_label_font_size = 7.1
 _main_ui_label_button_font_size = 7
 _info_label1_height = 200
 _info_label2_height = _info_label1_height
 _chart_info_label_width = 250
-_chart_size_factor = 0.27
-_east_chart_house_x = 5
+_chart_size_factor = 0.32
+_east_chart_house_x = 1
 _east_chart_house_y = _east_chart_house_x
 _east_chart_house_width = 110
 _east_chart_house_height = _east_chart_house_width
-_south_chart_house_x = 0
-_south_chart_house_y = 5
+_south_chart_house_x = 1
+_south_chart_house_y = _south_chart_house_x
 _south_chart_house_width = 340
 _south_chart_house_height = _south_chart_house_width
-_north_chart_house_x = 5
+_north_chart_house_x = 1
 _north_chart_house_y = _north_chart_house_x
 _north_chart_house_width = 320
 _north_chart_house_height = _north_chart_house_width
@@ -46,22 +49,33 @@ _footer_label_font_height = 8
 _footer_label_height = 26
 _lagnam_line_factor = 0.25
 _lagnam_line_thickness = 3
-_tab_names = ['panchangam_str','raasi_str','hora_str','drekkanam_str','saptamsam_str','navamsam_str',\
-              'dhasamsam_str','dhwadamsam_str','thrisamsam_str','sashtiamsam_str','dhasa_bhukthi_str',
-              'ashtaka_varga_str','compatibility_str']
-_dhasa_bhukthi_tab_start = 10
+_tab_names = ['panchangam_str','raasi_str','hora_str','drekkanam_str','chaturthamsa_str','panchamsa_str',
+              'shashthamsa_str','saptamsam_str','ashtamsa_str','navamsam_str','dhasamsam_str','rudramsa_str',
+              'dhwadamsam_str','shodamsa_str','vimsamsa_str','chaturvimsamsa_str','nakshatramsa_str','thrisamsam_str',
+              'khavedamsa_str','akshavedamsa_str','sashtiamsam_str',
+              'dhasa_bhukthi_str','ashtaka_varga_str','shodhaya_pinda_str','compatibility_str']
+_dhasa_bhukthi_tab_start = 21
 _dhasa_bhukthi_tab_count = 3
 _dhasa_bhukthi_tab_end = _dhasa_bhukthi_tab_start + _dhasa_bhukthi_tab_count - 1
 _ashtaka_varga_tab_start = _dhasa_bhukthi_tab_end + 1
 """ 8 BAV/PAV-Raasi for each planet and Asc. One SAV-D1/SAV-D9. 8 BAV/PAV-D9 for each planet"""
-_ashtaka_varga_tab_count = len(_tab_names[1:_dhasa_bhukthi_tab_start])
+_ashtaka_varga_tab_count = len(_tab_names[1:_dhasa_bhukthi_tab_start]) #+1 # +1 for shodhaya tables
 _ashtaka_varga_tab_end = _ashtaka_varga_tab_start + _ashtaka_varga_tab_count - 1
-_compatibility_tab_start = _ashtaka_varga_tab_end + 1 
+_shodhaya_tab_start  = _ashtaka_varga_tab_end + 1
+_shodhaya_tab_count = 2 # one for Raasi and another for Navamsam
+_shodhaya_dict = {0:'raasi_str',7:'navamsam_str'} #2 and 7 are horoscope chart counters
+_shodhaya_tab_end = _shodhaya_tab_start + _shodhaya_tab_count - 1
+
+_compatibility_tab_start = _shodhaya_tab_end + 1 
  
 _tab_count = len(_tab_names)
 
 available_chart_types = {'south indian':"SouthIndianChart",'north indian':'NorthIndianChart','east indian':'EastIndianChart'}#,'Western'}
 available_languages = {"English":'en','Tamil':'ta','Telugu':'te','Hindi':"hi",'Kannada':'ka'}
+class AlignDelegate(QStyledItemDelegate):
+    def initStyleOption(self, option, index):
+        super(AlignDelegate, self).initStyleOption(option, index)
+        option.displayAlignment = QtCore.Qt.AlignmentFlag.AlignHCenter
 class EastIndianChart(QWidget):
     """
         Draws East Indian Natal Chart and labels the planets
@@ -413,11 +427,14 @@ class ChartWindow(QWidget):
         self.horo_tabs = []
         self._charts = []
         self._ashtaka_charts = []
+        self._shodhaya_table1 = []
+        self._shodhaya_table_label1=[]
+        self._shodhaya_table2 = []
+        self._shodhaya_table_label2=[]
         self._chart_info_labels= []
         self.match_tables = [[ QTableWidget(13,4) for i in range(2)] for j in range(10)]
         self.db_tables =  []
         self._matching_star_list = QListWidget()
-        self._compatibility_tab_count = 0
         t = 0
         for tabName in self.tabNames:
             self.horo_tabs.append(QWidget())
@@ -431,13 +448,15 @@ class ChartWindow(QWidget):
             elif t==_ashtaka_varga_tab_start:
                 self._init_ashtaka_tab_widgets(t)
                 t += _ashtaka_varga_tab_count
+            elif t==_shodhaya_tab_start:
+                self._init_shodhaya_tab_widgets(t)
+                t += _shodhaya_tab_count
             elif self._show_compatibility and t==_compatibility_tab_start:
                 self._init_compatibility_tab_widgets(t)
-                t += 1 # 10 tabs created for compatibility
+                t += 1
             else:
                 self._init_chart_tab_widgets(t)
                 t +=1
-            #getattr(self,tab_function)(t)
         self.tabCount = self.tabWidget.count()
         self._add_footer_to_chart()
         self.setLayout(self._v_layout)
@@ -502,6 +521,41 @@ class ChartWindow(QWidget):
         self._charts[tab_index-1].update()
         #self._chart2.update()
         self.horo_tabs[tab_index].setLayout(h_layout)
+    def _init_shodhaya_tab_widgets(self,tab_index):
+        # create extra tabs depending on the count
+        for t in range(1,_shodhaya_tab_count):
+            self.horo_tabs.append(QWidget())
+            self.tabWidget.addTab(self.horo_tabs[tab_index+t],'')
+        self._shodhaya_table1 = [ QTableWidget(9,12) for i in range(_shodhaya_tab_count)] 
+        self._shodhaya_table_label1 = [ QLabel() for i in range(_shodhaya_tab_count)] 
+        self._shodhaya_table2 = [ QTableWidget(3,7) for i in range(_shodhaya_tab_count)] 
+        self._shodhaya_table_label2 = [ QLabel() for i in range(_shodhaya_tab_count)] 
+        """ create tables in shodhaya tab """
+        for t in range(_shodhaya_tab_count):
+            v_layout = QVBoxLayout()
+            self._shodhaya_table_label1[t].setText('Ashtaka Varga (After reduction)')
+            delegate = AlignDelegate(self._shodhaya_table1[t])
+            self._shodhaya_table1[t].setItemDelegate(delegate)
+            self._shodhaya_table_label2[t].setText('Ashtaka Varga (Shodhaya Pinda)')
+            delegate = AlignDelegate(self._shodhaya_table2[t])
+            self._shodhaya_table2[t].setItemDelegate(delegate)
+            v_layout.addWidget(self._shodhaya_table_label1[t])
+            v_layout.addWidget(self._shodhaya_table1[t])
+            v_layout.addWidget(self._shodhaya_table_label2[t])
+            v_layout.addWidget(self._shodhaya_table2[t])
+            for table in [self._shodhaya_table1[t], self._shodhaya_table2[t]]:
+                table.setStyleSheet('font-size:'+str(_ashtaka_table_font_size)+'pt')
+                table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+                table.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+                table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+                table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+                row_count = table.rowCount()
+                col_count = table.columnCount()
+                for row in range(row_count):
+                    for col in range(col_count):
+                        table.setItem(row,col,QTableWidgetItem(str(0)))
+                    
+            self.horo_tabs[tab_index+t].setLayout(v_layout)            
     def _init_ashtaka_tab_widgets(self, tab_index):
         # create extra tabs depending on the count
         for t in range(1,_ashtaka_varga_tab_count):
@@ -518,12 +572,12 @@ class ChartWindow(QWidget):
                     self._ashtaka_grid_layout.addWidget(self._ashtaka_charts[t][ac],i,j)
                     ac+=1
             self._ashtaka_grid_layout.setSpacing(0)
-            self.horo_tabs[tab_index+t].setLayout(self._ashtaka_grid_layout)
+            self.horo_tabs[tab_index+t].setLayout(self._ashtaka_grid_layout)        
     def _init_main_window(self):
         fp = open('./program_inputs.txt', encoding='utf-8', mode='r')
-        window_title = fp.readline().split('=')[1]
-        self._footer_title = fp.readline().split('=')[1]
-        self._image_icon_path = fp.readline().split('=')[1]
+        window_title = fp.readline().split('=',1)[1]
+        self._footer_title = fp.readline().split('=',1)[1]
+        self._image_icon_path = fp.readline().split('=',1)[1]
         fp.close()
         self.setWindowIcon(QtGui.QIcon(_images_path+"lord_ganesha2.jpg"))
         self._language = list(available_languages.keys())[0]
@@ -533,62 +587,62 @@ class ChartWindow(QWidget):
             self._chart_type = list(available_chart_types.keys())[ci]
         self.setFixedSize(_main_window_width,_main_window_height)        
     def _create_row1_ui(self):
-        h_layout = QHBoxLayout()
+        self._row1_h_layout = QHBoxLayout()
         self._name_label = QLabel("Name:")
-        h_layout.addWidget(self._name_label)
+        self._row1_h_layout.addWidget(self._name_label)
         self._name_text = QLineEdit("")
         self._name = self._name_text.text()
         self._name_text.setToolTip('Enter your name')
-        h_layout.addWidget(self._name_text)
+        self._row1_h_layout.addWidget(self._name_text)
         self._gender_combo = QComboBox()
         self._gender_combo.addItems(['Male','Female'])
-        h_layout.addWidget(self._gender_combo)
+        self._row1_h_layout.addWidget(self._gender_combo)
         self._place_label = QLabel("Place:")
-        h_layout.addWidget(self._place_label)
+        self._row1_h_layout.addWidget(self._place_label)
         self._place_name = '' # 'Chennai, IN'
         self._place_text = QLineEdit(self._place_name)#"Chennai, IN")
         self._place_text.editingFinished.connect(lambda : self._get_place_latitude_longitude(self._place_text.text()))
         self._place_text.setToolTip('Enter place of birth, country name')
-        h_layout.addWidget(self._place_text)
+        self._row1_h_layout.addWidget(self._place_text)
         self._lat_label = QLabel("Latidude:")
-        h_layout.addWidget(self._lat_label)
+        self._row1_h_layout.addWidget(self._lat_label)
         self._lat_text = QLineEdit('')
         self._latitude = 0.0
         self._lat_text.setToolTip('Enter Latitude preferably exact at place of birth: Format: +/- xx.xxx')
-        h_layout.addWidget(self._lat_text)
+        self._row1_h_layout.addWidget(self._lat_text)
         self._long_label = QLabel("Longitude:")
-        h_layout.addWidget(self._long_label)
+        self._row1_h_layout.addWidget(self._long_label)
         self._long_text = QLineEdit('')#'xx.xxxx')#"80.2619")
         self._longitude = 0.0
         self._long_text.setToolTip('Enter Longitude preferably exact at place of birth. Format +/- xx.xxx')
-        h_layout.addWidget(self._long_text)
+        self._row1_h_layout.addWidget(self._long_text)
         self._tz_label = QLabel("Time Zone:")
-        h_layout.addWidget(self._tz_label)
+        self._row1_h_layout.addWidget(self._tz_label)
         self._tz_text = QLineEdit('')#'x.x')#"+5.5")
         self._time_zone = 0.0
         self._tz_text.setToolTip('Enter Time offset from GMT e.g. -5.5 or 4.5')
-        h_layout.addWidget(self._tz_text)
-        self._v_layout.addLayout(h_layout)
+        self._row1_h_layout.addWidget(self._tz_text)
+        self._v_layout.addLayout(self._row1_h_layout)
     def _create_row2_ui(self):
-        h_layout = QHBoxLayout()
+        self._row2_h_layout = QHBoxLayout()
         self._dob_label = QLabel("Date of Birth:")
-        h_layout.addWidget(self._dob_label)
+        self._row2_h_layout.addWidget(self._dob_label)
         self._date_of_birth = ''# '1996,12,7'
         self._dob_text = QLineEdit(self._date_of_birth)#'yyyy,mm,dd')#"1996,12,7")
         self._dob_text.setToolTip('Date of birth in the format YYYY,MM,DD\nFor BC enter negative years.\nAllowed Year Range: -13000 (BC) to 16800 (AD)')
-        h_layout.addWidget(self._dob_text)
+        self._row2_h_layout.addWidget(self._dob_text)
         self._tob_label = QLabel("Time of Birth:")
-        h_layout.addWidget(self._tob_label)
+        self._row2_h_layout.addWidget(self._tob_label)
         self._time_of_birth = '' # '10:34:00'
         self._tob_text = QLineEdit(self._time_of_birth)#'hh:mm:ss')#"10:34:00")
         self._tob_text.setToolTip('Enter time of birth in the format HH:MM:SS if afternoon use 12+ hours')
-        h_layout.addWidget(self._tob_text)
+        self._row2_h_layout.addWidget(self._tob_text)
         """ TODO: Changing chart type does not work with show chart click
         self._chart_type_combo = QComboBox()
         self._chart_type_combo.addItems(available_chart_types.keys())
         self._chart_type_combo.setToolTip('Choose birth chart style north, south or east indian')
         self._chart_type_combo.setCurrentText(self._chart_type)
-        h_layout.addWidget(self._chart_type_combo)
+        self._row2_h_layout.addWidget(self._chart_type_combo)
         """
         available_ayanamsa_modes = list(panchanga.available_ayanamsa_modes.keys())#[:-1]
         self._ayanamsa_combo = QComboBox()
@@ -597,50 +651,50 @@ class ChartWindow(QWidget):
         self._ayanamsa_mode = "LAHIRI"
         self._ayanamsa_value = None
         self._ayanamsa_combo.setCurrentText(self._ayanamsa_mode)
-        h_layout.addWidget(self._ayanamsa_combo)
+        self._row2_h_layout.addWidget(self._ayanamsa_combo)
         self._lang_combo = QComboBox()
         self._lang_combo.addItems(available_languages.keys())
         self._lang_combo.setCurrentText(self._language)
         self._lang_combo.setToolTip('Choose language for display')
         self._lang_combo.currentIndexChanged.connect(self._update_main_window_label_and_tooltips)
-        h_layout.addWidget(self._lang_combo)
+        self._row2_h_layout.addWidget(self._lang_combo)
         self._compute_button = QPushButton("Show Chart")
         self._compute_button.setFont(QtGui.QFont("Arial Bold",9))
         self._compute_button.clicked.connect(self.compute_horoscope)
         self._compute_button.setToolTip('Click to update the chart information based on selections made')
-        h_layout.addWidget(self._compute_button)
+        self._row2_h_layout.addWidget(self._compute_button)
         self._save_image_button = QPushButton("Save as PDF")
         self._save_image_button.setFont(QtGui.QFont("Arial Bold",8))
         self._save_image_button.clicked.connect(lambda : self.save_as_pdf(pdf_file_name=None))
         self._save_image_button.setToolTip('Click to save horoscope as a PDF')
-        h_layout.addWidget(self._save_image_button)
-        self._v_layout.addLayout(h_layout)
+        self._row2_h_layout.addWidget(self._save_image_button)
+        self._v_layout.addLayout(self._row2_h_layout)
     def _create_row3_ui(self):
-        h_layout = QHBoxLayout()
+        self._row3_h_layout = QHBoxLayout()
         self._mahendra_porutham_checkbox = QCheckBox()
         self._mahendra_porutham_checkbox.setChecked(True)
         self._mahendra_porutham = self._mahendra_porutham_checkbox.isChecked()
-        h_layout.addWidget(self._mahendra_porutham_checkbox)
+        self._row3_h_layout.addWidget(self._mahendra_porutham_checkbox)
         self._vedha_porutham_checkbox = QCheckBox()
         self._vedha_porutham_checkbox.setChecked(True)
         self._vedha_porutham = self._vedha_porutham_checkbox.isChecked()
-        h_layout.addWidget(self._vedha_porutham_checkbox)
+        self._row3_h_layout.addWidget(self._vedha_porutham_checkbox)
         self._rajju_porutham_checkbox = QCheckBox()
         self._rajju_porutham_checkbox.setChecked(True)
         self._rajju_porutham = self._rajju_porutham_checkbox.isChecked()
-        h_layout.addWidget(self._rajju_porutham_checkbox)
+        self._row3_h_layout.addWidget(self._rajju_porutham_checkbox)
         self._sthree_dheerga_porutham_checkbox = QCheckBox()
         self._sthree_dheerga_porutham_checkbox.setChecked(True)
         self._sthree_dheerga_porutham = self._sthree_dheerga_porutham_checkbox.isChecked()
-        h_layout.addWidget(self._sthree_dheerga_porutham_checkbox)
+        self._row3_h_layout.addWidget(self._sthree_dheerga_porutham_checkbox)
         self._min_score_label = QLabel('')
-        h_layout.addWidget(self._min_score_label)
+        self._row3_h_layout.addWidget(self._min_score_label)
         self._min_score_combo = QSpinBox()
         self._min_score_combo.setRange(0.0,36.0)
         self._min_score_combo.setSingleStep(0.5)
         self._min_score_combo.setValue(18.0)
-        h_layout.addWidget(self._min_score_combo)
-        self._v_layout.addLayout(h_layout)
+        self._row3_h_layout.addWidget(self._min_score_combo)
+        self._v_layout.addLayout(self._row3_h_layout)
     def _add_footer_to_chart(self):
         self._footer_label = QLabel('')
         self._footer_label.setTextFormat(Qt.TextFormat.RichText)
@@ -651,6 +705,8 @@ class ChartWindow(QWidget):
         self._footer_label.setFixedHeight(_footer_label_height)
         self._footer_label.setFixedWidth(self.width())
         self._footer_label.setWordWrap(True)
+        self._footer_label.setOpenExternalLinks(True)
+        print(self._footer_title)
         self._v_layout.addWidget(self._footer_label)
     def _on_application_exit(self):
         def except_hook(cls, exception, traceback):
@@ -924,6 +980,22 @@ class ChartWindow(QWidget):
         info_str += format_str % (self.resources[key],self._calendar_info[self.resources[key]])
         key = 'karanam_str'
         info_str += format_str % (self.resources[key],self._calendar_info[self.resources[key]])
+        jd = self._horo.julian_day
+        place = panchanga.Place(self._place_name,float(self._latitude),float(self._longitude),float(self._time_zone))
+        bt=self._horo.birth_time
+        tob = bt[0]+bt[1]/60.0+bt[2]/3600.0
+        key = self.resources['bhava_lagna_str']
+        value = panchanga.bhava_lagna(jd,place,tob,1,as_string=True)
+        info_str += format_str %(key,value)
+        key = self.resources['hora_lagna_str']
+        value = panchanga.hora_lagna(jd,place,tob,1,as_string=True)
+        info_str += format_str %(key,value)
+        key = self.resources['ghati_lagna_str']
+        value = panchanga.ghati_lagna(jd,place,tob,1,as_string=True)
+        info_str += format_str %(key,value)
+        key = self.resources['sree_lagna_str']
+        value = panchanga.sree_lagna(jd,place,1,as_string=True)
+        info_str += format_str %(key,value)
         key = self.resources['raasi_str']+'-'+self.resources['ascendant_str']
         value = self._horoscope_info[key]#.split()[:1]
         info_str += format_str % (self.resources['ascendant_str'],value)
@@ -1005,16 +1077,20 @@ class ChartWindow(QWidget):
         self._info_label2.setText(info_str)
     def _update_tabs_with_divisional_charts(self,jd,place):
         i_end = 0
+        dhasa_varga_factors = panchanga.dhasa_varga_factors
+        bt=self._horo.birth_time
+        tob = bt[0]+bt[1]/60.0+bt[2]/3600.0
         format_str = '%-18s%-20s\n'
         for t,tab in enumerate(_tab_names[0:_dhasa_bhukthi_tab_start]):
             tab_name = self.resources[tab]
             self.tabWidget.setTabText(t,tab_name)
             """ update the chart from horoscope charts """
             if t>0:
+                dhasa_varga_factor = dhasa_varga_factors[t-1]
                 i_start = i_end # (t-1)*10
-                i_end = i_start + 10
-                if t==1: # Raasi Chart Include Upagraha details as well
-                    i_end = i_start + 22 # to incude extra 12 rows for upagraha details 
+                #i_end = i_start + 10
+                #if t==1: # Raasi Chart Include Upagraha details as well
+                i_end = i_start + 26 # 4 for special lagnas, 10 from lagnam and planets, 12 rows for upagraha details 
                 chart_info = ''
                 for k,v in list(self._horoscope_info.items())[i_start:i_end]:
                     k1 = k.split('-')[-1]
@@ -1074,7 +1150,7 @@ class ChartWindow(QWidget):
                 self.db_tables[db_tab][col].resizeColumnToContents(1)
             self.tabWidget.setTabText(_dhasa_bhukthi_tab_start+db_tab,tab_title+'-'+str(db_tab+1))
     def _convert_language_chart_to_english(self,rasi_1d_lang):
-        planet_list_lang = self._horo._get_planet_list()+[self.resources['ascendant_str']]
+        planet_list_lang = self._horo._get_planet_list()[0]+[self.resources['ascendant_str']]
         #print(planet_list_lang)
         planet_list_en = ['Sun ☉','Moon ☾','Mars ♂','Mercury ☿','Jupiter ♃','Venus ♀','Saturn ♄','Raagu ☊','Kethu ☋','Uranus','Neptune','Pluto','Lagnam']
         planet_lang_dict = {planet_list_lang[i]:planet_list_en[i] for i in range(len(planet_list_en))}
@@ -1084,20 +1160,68 @@ class ChartWindow(QWidget):
                 if k in house:
                     rasi_1d_lang[i] = rasi_1d_lang[i].replace(k,v)
         return rasi_1d_lang
+    def _update_shodhaya_table_information(self):
+        """ Following List should match _shodhaya_tab_count """
+        tab_names = [self.resources[st_res] for st_res in _shodhaya_dict.values()]
+        chart_counters = [index for index in _shodhaya_dict.keys()]
+        for t in range(_shodhaya_tab_count):
+            tab_name = self.resources['shodhaya_pinda_str']+'-'+tab_names[t]
+            self.tabWidget.setTabText(_shodhaya_tab_start+t,tab_name)
+            label_title = self.resources['ashtaka_varga_str']+' ('+self.resources['trikona_str']+'-'+self.resources['ekadhipathya_str']+' )'
+            self._shodhaya_table_label1[t].setText(label_title)
+            label_title = self.resources['shodhaya_pinda_str']
+            self._shodhaya_table_label2[t].setText(label_title)
+            chart_1d = self._horoscope_charts[chart_counters[t]] #charts[t]
+            chart_1d_en = self._convert_language_chart_to_english(chart_1d)
+            bav,sav,_ = ashtakavarga.get_ashtaka_varga(chart_1d_en)
+            tri = ashtakavarga._trikona_sodhana(bav)
+            eka = ashtakavarga._ekadhipatya_sodhana(tri,chart_1d_en)
+            sav = np.asarray(eka).sum(axis=0).tolist()
+            raasi_pindas,graha_pindas,shodya_pindas = ashtakavarga._sodhya_pindas(eka,chart_1d_en)
+            row_count = self._shodhaya_table1[t].rowCount()
+            col_count = self._shodhaya_table1[t].columnCount()
+            for r in range(col_count):
+                for p in range(row_count-1):
+                    self._shodhaya_table1[t].setItem(p,r,QTableWidgetItem(str(eka[p][r])))
+                self._shodhaya_table1[t].setItem(row_count-1,r,QTableWidgetItem(str(sav[r])))
+            for p in range(row_count):
+                if p==row_count-1:
+                    header = "SAV"
+                elif p==row_count-2:
+                    header = self.resources['ascendant_str']
+                else:
+                    header = self._horo._get_planet_list()[0][p]
+                self._shodhaya_table1[t].setVerticalHeaderItem(p,QTableWidgetItem(header))
+                self._shodhaya_table1[t].resizeRowToContents(p)
+            for r in range(col_count):
+                header = self._horo._get_raasi_list()[0][r]
+                self._shodhaya_table1[t].setHorizontalHeaderItem(r,QTableWidgetItem(header))
+                self._shodhaya_table1[t].resizeColumnToContents(r)                
+            self._shodhaya_table1[t].update()
+            row_count = self._shodhaya_table2[t].rowCount()
+            col_count = self._shodhaya_table2[t].columnCount()
+            row_names = [self.resources['graha_pinda_str'],self.resources['raasi_pinda_str'],self.resources['shodhaya_pinda_str']]
+            for p in range(col_count):
+                self._shodhaya_table2[t].setItem(0,p,QTableWidgetItem(str(raasi_pindas[p])))
+                self._shodhaya_table2[t].setItem(1,p,QTableWidgetItem(str(graha_pindas[p])))
+                self._shodhaya_table2[t].setItem(2,p,QTableWidgetItem(str(shodya_pindas[p])))
+            for row in range(row_count):
+                self._shodhaya_table2[t].setVerticalHeaderItem(row,QTableWidgetItem(row_names[row]))
+                self._shodhaya_table2[t].resizeRowToContents(row)
+            for p in range(col_count):
+                self._shodhaya_table2[t].setHorizontalHeaderItem(p,QTableWidgetItem(self._horo._get_planet_list()[0][p]))
+                self._shodhaya_table2[t].resizeColumnToContents(p)
+            self._shodhaya_table2[t].update()
     def _update_ashtaka_varga_tab_information(self):
         jd = self._horo.julian_day  # For ascendant and planetary positions, dasa buthi - use birth time
         place = panchanga.Place(self._place_name,float(self._latitude),float(self._longitude),float(self._time_zone))
         tab_names = [self.resources[tab] for tab in _tab_names[1:_dhasa_bhukthi_tab_start]]
-        charts = [self._horoscope_charts[0],self._horoscope_charts[4]]
         for t in range(_ashtaka_varga_tab_count):
             tab_name = self.resources['ashtaka_varga_str']+'-'+tab_names[t]
             self.tabWidget.setTabText(_ashtaka_varga_tab_start+t,tab_name)
             chart_1d = self._horoscope_charts[t] #charts[t]
-            #print(chart_1d)
             chart_1d_en = self._convert_language_chart_to_english(chart_1d)
-            #print(chart_1d_en)
-            #_convert_language_chart_to_english(chart_1d)
-            av,sav, pav = ashtakavarga.ashtaka_varga_chart(chart_1d_en)
+            bav,sav, pav = ashtakavarga.get_ashtaka_varga(chart_1d_en)
             ac = 0
             for i in range(3):
                 for j in range(3):
@@ -1105,13 +1229,11 @@ class ChartWindow(QWidget):
                         chart_data_1d = sav
                         chart_title = 'SAV'
                     else:
-                        chart_data_1d = av[ac-1]
-                        chart_title = self._horo._get_planet_list()[ac-1]
-                    #print(chart_title,'chart_data_1d',chart_data_1d)
+                        chart_data_1d = bav[ac-1]
+                        chart_title = self._horo._get_planet_list()[0][ac-1]
                     if self._chart_type.lower() == 'north indian':
                         _ascendant = panchanga.ascendant(jd,place,False)
                         asc_house = _ascendant[0]+1
-                        #print('asc_house',asc_house)
                         chart_data_north = chart_data_1d[asc_house-1:]+chart_data_1d[0:asc_house-1]
                         self._ashtaka_charts[t][ac].setData(chart_data_north,chart_title=chart_title)
                     elif self._chart_type.lower() == 'east indian':
@@ -1122,8 +1244,7 @@ class ChartWindow(QWidget):
                         self._ashtaka_charts[t][ac].setData(chart_data_2d,chart_title=chart_title,chart_title_font_size=7)
                     self._ashtaka_charts[t][ac].parent().layout().setSpacing(0)
                     self._ashtaka_charts[t][ac].update()
-                    ac += 1
-        
+                    ac += 1        
     def _update_compatibility_tab_information(self):
         self.tabWidget.setTabText(_compatibility_tab_start,self.resources['compatibility_str'])
         bn=None
@@ -1228,6 +1349,7 @@ class ChartWindow(QWidget):
         self._update_tab_chart_information()
         self._update_dhasa_bhukthi_tab_information()
         self._update_ashtaka_varga_tab_information()
+        self._update_shodhaya_table_information()
         if  self._show_compatibility:
             self._update_compatibility_tab_information()
         self.update()
@@ -1249,43 +1371,82 @@ class ChartWindow(QWidget):
             Save the displayed chart as a pdf
             Choose a file from file save dialog displayed
         """
+        image_prefix = 'pdf_grb_'
+        image_ext = '.png'
         if pdf_file_name==None:
             path = QFileDialog.getSaveFileName(self, 'Choose folder and file to save as PDF file', './output', 'PDF files (*.pdf)')#)
             pdf_file_name = path[0]
         image_files = []
+        combined_image_files = []
+        image_id = 1
         if pdf_file_name:
             for t in range(self.tabCount):
-                def _show_only_tab(t): #set onlt tab t to be visible
-                    for ti in range(self.tabCount):
-                        self.tabWidget.setTabVisible(ti,False)
-                        if t==ti:
-                            self.tabWidget.setTabVisible(ti,True)
+                self._hide_show_even_odd_pages(image_id)
                 self.tabWidget.setCurrentIndex(t)
-                _show_only_tab(t)
+                self._show_only_tab(t)
                 if t==self.tabCount-1:
                     for row in range(self._matching_star_list.count()):
+                        self._hide_show_even_odd_pages(image_id)
                         self._matching_star_list.setCurrentRow(row)
-                        image_file = _images_path+'pdf_grb_'+str(t)+'_'+str(row+1)+'.png'
+                        image_file = _images_path+image_prefix+str(image_id)+image_ext
                         im = self.grab()
                         im.save(image_file) 
                         image_files.append(image_file)
+                        image_id +=1
                 else:
-                    image_file = _images_path+'pdf_grb_'+str(t)+'.png'
+                    image_file = _images_path+image_prefix+str(image_id)+image_ext
                     image_files.append(image_file)
                     im = self.grab()
                     im.save(image_file) 
+                    image_id +=1
+            self._hide_show_layout_widgets(self._row2_h_layout, True)
+            self._hide_show_layout_widgets(self._row3_h_layout, True)
+            self._footer_label.show()
             for t in range(self.tabCount): # reset all tabs to visible
                 self.tabWidget.setTabVisible(t,True)
+            ci = 1
+            for i in range(0,len(image_files),2):
+                combined_image_file = _images_path+'combined_'+str(ci)+image_ext
+                _combine_multiple_images(image_files[i:i+2],combined_image_file)
+                combined_image_files.append(combined_image_file)
+                ci += 1
+            image_count = len(image_files)
+            combined_image_count = len(combined_image_files)
             with open(pdf_file_name,"wb") as f:
-                f.write(img2pdf.convert(image_files))
+                f.write(img2pdf.convert(combined_image_files))
             f.close()
-        for image_file in image_files:
+        for image_file in image_files+combined_image_files:
             if os.path.exists(image_file):
                 os.remove(image_file)
+    def _hide_show_even_odd_pages(self,image_id):
+        if image_id % 2 == 0: # Even Page
+            self._hide_show_layout_widgets(self._row1_h_layout, False)
+            self._hide_show_layout_widgets(self._row2_h_layout, False)
+            self._hide_show_layout_widgets(self._row3_h_layout, False)
+            self._footer_label.show()
+        else:
+            self._hide_show_layout_widgets(self._row1_h_layout, True)
+            if image_id==1:
+                self._hide_show_layout_widgets(self._row2_h_layout, True)
+                self._hide_show_layout_widgets(self._row3_h_layout, True)
+            self._footer_label.hide()        
+    def _hide_show_layout_widgets(self,layout,show):
+        for index in range(layout.count()):
+            myWidget = layout.itemAt(index).widget()
+            if show:
+                myWidget.show()
+            else:
+                myWidget.hide()
+            index -=1            
     def exit(self):
         self.close()
         QApplication.quit()
         print('Application Closed')
+    def _show_only_tab(self,t): #set onlt tab t to be visible
+        for ti in range(self.tabCount):
+            self.tabWidget.setTabVisible(ti,False)
+            if t==ti:
+                self.tabWidget.setTabVisible(ti,True)
 def show_horoscope(data):
     """
         Same as class method show() to display the horoscope
@@ -1389,6 +1550,41 @@ def _dhasa_balance(date_of_birth,dhasa_end_date):
     ded = datetime(abs(int(year)),int(month),int(day))
     duration = _get_date_difference(dob,ded)#,starting_text="Dhasa Balance:")
     return duration
+def _combine_multiple_images(image_list,output_image,combine_mode='vertical',image_quality_in_pixels=100):
+    total_width = 0
+    total_height = 0
+    max_width = 0
+    max_height = 0
+    ix =[]
+    for img in image_list:
+        im = Image.open(img)
+        size = im.size
+        w = size[0]
+        h = size[1]
+        total_width += w 
+        total_height += h
+        
+        if h > max_height:
+            max_height = h
+        if w > max_width:
+            max_width = w
+        ix.append(im) 
+    #print((total_width, total_height, max_width, max_height))
+    if combine_mode.lower()=='vertical':
+        target = Image.new('RGB', (max_width, total_height))
+    else:
+        target = Image.new('RGB', (total_width, max_height))
+    pre_w = 0
+    pre_h = 0
+    for img in ix:
+        if combine_mode.lower()=='vertical':
+            target.paste(img, (pre_w, pre_h, pre_w+max_width, pre_h + img.size[1]))
+            pre_h += img.size[1]
+        else:
+            target.paste(img, (pre_w, pre_h, pre_w+img.size[0], pre_h + img.size[1]))
+            pre_w += img.size[0]            
+    #print(image_list,'combined to',output_image)
+    target.save(output_image, quality=image_quality_in_pixels)
 if __name__ == "__main__":
     def except_hook(cls, exception, traceback):
         print('exception called')
@@ -1396,22 +1592,18 @@ if __name__ == "__main__":
     sys.excepthook = except_hook
     App = QApplication(sys.argv)
     chart_type = 'South'
-    chart = ChartWindow(chart_type=chart_type,show_marriage_compatibility=True)
-    chart.language('Tamil')
-    chart.name('Bhuvana') #Rama
-    chart.gender('Female')
-    chart.place('Chennai,IN') #Ayodhya,IN
-    chart.latitude('13.0389')
-    chart.longitude('80.2619')
-    chart.date_of_birth('1996,12,7')#'-5114,1,10')
-    chart.time_of_birth('10:34:00')#'12:30:00')
+    chart = ChartWindow(chart_type=chart_type,show_marriage_compatibility=False)
+    chart.language('Eng;ish')
+    chart.name('Krishna') #Rama
+    chart.gender('Male')
+    chart.place('Mathura,IN') #Ayodhya,IN
+    chart.latitude('27.4955539')
+    chart.longitude('77.6855554')
+    chart.date_of_birth('-3229,6,1')#'-5114,1,10')
+    chart.time_of_birth('22:34:00')#'12:30:00')
     chart.time_zone('5.5')
     chart.chart_type(chart_type)
-    chart.mahendra_porutham(False)
-    chart.vedha_porutham(False)
-    chart.rajju_porutham(False)
-    chart.sthree_dheerga_porutham(False)
-    #chart.ayanamsa_mode("SIDM_USER",0.0)
     chart.compute_horoscope()
     chart.show()
+    #chart.save_as_pdf('./output.pdf')
     sys.exit(App.exec())
